@@ -2,16 +2,17 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="track_robot">
 
     <!--common-->
-    <xacro:include filename="$(find sphero_rvr_description)/urdf/common.urdf.xacro" />
-    <xacro:include filename="$(find sphero_rvr_description)/urdf/materials.urdf.xacro" />
-    <xacro:include filename="$(find sphero_rvr_description)/urdf/geometry.urdf.xacro" />
+    <xacro:include filename="package://sphero_rvr_description/urdf/common.urdf.xacro" />
+    <xacro:include filename="package://sphero_rvr_description/urdf/materials.urdf.xacro" />
+    <xacro:include filename="package://sphero_rvr_description/urdf/geometry.urdf.xacro" />
 
     <!-- parts -->
-    <xacro:include filename="$(find sphero_rvr_description)/urdf/body.urdf.xacro" />
-    <xacro:include filename="$(find sphero_rvr_description)/urdf/wheel.urdf.xacro" />
+    <xacro:include filename="package://sphero_rvr_description/urdf/body.urdf.xacro" />
+    <xacro:include filename="package://sphero_rvr_description/urdf/wheel.urdf.xacro" />
 
     <!-- urg laser -->
-    <xacro:include filename="$(find urg_node)/urdf/hokuyo_ust10.urdf.xacro" />
+    <!-- TODO: Verify package provides this xacro in ROS2; adjust to urg_node2 if needed -->
+    <xacro:include filename="package://urg_node/urdf/hokuyo_ust10.urdf.xacro" />
 
 
     <!-- dummy base link no inertia to satisfy kdl -->
@@ -58,27 +59,21 @@
     <!-- gazebo extras -->
     <!-- gazebo control -->
     <gazebo>
-        <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
-            <robotNamespace>/</robotNamespace>
-        </plugin>
+        <plugin name="gazebo_ros2_control" filename="libgazebo_ros2_control.so"/>
     </gazebo>
 
     <!-- imu -->
-    <gazebo>
-        <plugin name="imu_controller" filename="libhector_gazebo_ros_imu.so">
-            <robotNamespace>/</robotNamespace>
-            <alwaysOn>true</alwaysOn>
-            <updateRate>10.0</updateRate>
-            <bodyName>base_link</bodyName>
-            <topicName>rvr_driver/imu/data</topicName>
-            <accelDrift>0.001 0.001 0.001</accelDrift>
-            <accelGaussianNoise>0.001 0.001 0.001</accelGaussianNoise>
-            <rateDrift>0.001 0.001 0.001</rateDrift>
-            <rateGaussianNoise>0.005 0.005 0.005 </rateGaussianNoise>
-            <headingDrift>0.001</headingDrift>
-            <headingGaussianNoise>0.005</headingGaussianNoise>
-            <xyzOffsets>0 0 0</xyzOffsets>
-            <rpyOffsets>0 0 0</rpyOffsets>
-        </plugin>
+    <gazebo reference="base_link">
+        <sensor type="imu" name="imu_sensor">
+            <always_on>true</always_on>
+            <update_rate>10.0</update_rate>
+            <plugin name="imu_plugin" filename="libgazebo_ros_imu_sensor.so">
+                <ros>
+                    <namespace>/</namespace>
+                </ros>
+                <frame_name>base_link</frame_name>
+                <topic_name>rvr_driver/imu/data</topic_name>
+            </plugin>
+        </sensor>
     </gazebo>
 </robot>

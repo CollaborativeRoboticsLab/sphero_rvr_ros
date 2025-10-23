@@ -3,7 +3,7 @@
 
     <xacro:macro name="body" params="name">
 
-        <xacro:include filename="$(find sphero_rvr_description)/urdf/geometry.urdf.xacro" />
+        <xacro:include filename="package://sphero_rvr_description/urdf/geometry.urdf.xacro" />
 
         <link name="${name}" >
             <visual>

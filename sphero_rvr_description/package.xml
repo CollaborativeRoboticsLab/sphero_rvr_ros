@@ -1,19 +1,24 @@
 <?xml version="1.0"?>
-<package format="2">
+<package format="3">
   <name>sphero_rvr_description</name>
-  <version>0.0.0</version>
+  <version>1.0.0</version>
   <description>The sphero_rvr_description package</description>
 
-  <maintainer email="mik-p@github.com">mik p</maintainer>
-
   <license>MIT</license>
+  <maintainer email="mppritchard3@hotmail.com">mik-p</maintainer>
+  <author email="mppritchard3@hotmail.com">mik p</author>
 
-  <author email="mik-p@github.com">mik p</author>
+  <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <buildtool_depend>catkin</buildtool_depend>
+  <!-- Runtime dependencies for publishing robot description in ROS2 -->
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>joint_state_publisher</exec_depend>
+  <exec_depend>joint_state_publisher_gui</exec_depend>
+  <exec_depend>xacro</exec_depend>
+  <!-- TODO: Verify ROS2 package name for Hokuyo driver (urg_node vs urg_node2) -->
+  <exec_depend>urg_node</exec_depend>
 
-  <depend>robot_state_publisher</depend>
-  <depend>joint_state_publisher</depend>
-  <depend>xacro</depend>
-  <depend>urg_node</depend>
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
 </package>
