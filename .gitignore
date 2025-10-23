@@ -1,1 +1,9 @@
 .vscode/
+
+.github/instructions/
+
+build/
+log/
+install/
+
+.env

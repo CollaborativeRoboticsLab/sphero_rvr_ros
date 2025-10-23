@@ -1,42 +1,24 @@
-FROM osrf/ros:noetic-desktop-full
-
-ARG ROS_DISTRO=noetic
-ARG DEBIAN_FRONTEND=noninteractive
-
-# update locale
-RUN apt-get update && apt-get install -y locales
-RUN locale-gen en_US en_US.UTF-8
-RUN update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
-
-# install dev tools
-RUN apt-get install -y \
-    python3-rosdep \
-    python3-rosinstall \
-    python3-rosinstall-generator \
-    python3-wstool \
-    build-essential \
-    wget \
-    git \
-    python3-pip \
-    python3-venv
+FROM ros:jazzy
 
 # Add vscode user with same UID and GID as your host system
-# (copied from https: //code.visualstudio.com/remote/advancedcontainers/add-nonroot-user#_creating-a-nonroot-user)
-ARG USERNAME=vscode
+# (modified from https://code.visualstudio.com/remote/advancedcontainers/add-nonroot-user#_creating-a-nonroot-user)
+# ubuntu now has a 1000 user ubuntu
+ARG USERNAME=ubuntu
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
-RUN groupadd --gid $USER_GID $USERNAME \
-    && useradd -s /bin/bash --uid $USER_UID --gid $USER_GID -m $USERNAME \
-    && apt-get update \
-    && apt-get install -y sudo \
+
+# RUN groupadd --gid $USER_GID $USERNAME \
+#     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+
+RUN apt-get update && apt-get upgrade -y \
+    && apt-get install -y \
+    sudo \
+    git \
     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
     && chmod 0440 /etc/sudoers.d/$USERNAME
 
 # Switch from root to user
 USER $USERNAME
-
-# Add user to video group to allow access to webcam
-RUN sudo usermod --append --groups video $USERNAME
 
 # Rosdep update
 RUN rosdep update
@@ -44,7 +26,5 @@ RUN rosdep update
 # Source the ROS setup file
 RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> ~/.bashrc
 
-RUN mkdir -p /home/$USERNAME/catkin_ws/src
-
-# default workspace
-WORKDIR /home/$USERNAME/catkin_ws
+# make sure folders exist
+RUN mkdir -p ~/colcon_ws/src
