@@ -1,8 +1,16 @@
-axis_linear: 1 # LS vert
-scale_linear: 0.4
-scale_linear_turbo: 0.7
-axis_angular: 3 # RS hori
-scale_angular: 6.0
-scale_angular_turbo: 6.0
-enable_button: 4 # LB
-enable_turbo_button: 5 # RB
+/**:
+  ros__parameters:
+    axis_linear:
+      x: 1 # LS vert
+    scale_linear:
+      x: 0.4
+    scale_linear_turbo:
+      x: 0.7
+    axis_angular:
+      yaw: 3 # RS hori
+    scale_angular:
+      yaw: 6.0
+    scale_angular_turbo:
+      yaw: 6.0
+    enable_button: 4 # LB
+    enable_turbo_button: 5 # RB

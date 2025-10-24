@@ -1,26 +1,28 @@
-topics:
-  - name: joy
-    topic: joy_teleop/cmd_vel
-    timeout: 0.5
-    priority: 100
-  - name: tablet
-    topic: tablet_teleop/cmd_vel
-    timeout: 0.5
-    priority: 90
-  - name: interactive_marker
-    topic: diff_drive_marker/cmd_vel
-    timeout: 0.5
-    priority: 20
-  - name: nav
-    topic: nav/cmd_vel
-    timeout: 0.5
-    priority: 10
-  - name: external
-    topic: cmd_vel
-    timeout: 0.5
-    priority: 5
-locks:
-  - name: e_stop
-    topic: e_stop
-    timeout: 0.0
-    priority: 255
+/**:
+  ros__parameters:
+    topics:
+      joy:
+        topic: joy_teleop/cmd_vel
+        timeout: 0.5
+        priority: 100
+      tablet:
+        topic: tablet_teleop/cmd_vel
+        timeout: 0.5
+        priority: 90
+      interactive_marker:
+        topic: diff_drive_marker/cmd_vel
+        timeout: 0.5
+        priority: 20
+      nav:
+        topic: nav/cmd_vel
+        timeout: 0.5
+        priority: 10
+      external:
+        topic: cmd_vel
+        timeout: 0.5
+        priority: 5
+    locks:
+      e_stop:
+        topic: e_stop
+        timeout: 0.0
+        priority: 255
