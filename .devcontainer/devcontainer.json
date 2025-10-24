@@ -1,10 +1,10 @@
 {
     "name": "sphero rvr jazzy base",
     "dockerFile": "Dockerfile",
-    "remoteUser": "vscode",
+    "remoteUser": "ubuntu",
     "runArgs": [
         "--network=host"
     ],
-    "workspaceMount": "source=${localWorkspaceFolder},target=/home/vscode/colcon_ws/src/${localWorkspaceFolderBasename},type=bind",
-    "workspaceFolder": "/home/vscode/colcon_ws"
+    "workspaceMount": "source=${localWorkspaceFolder},target=/home/ubuntu/colcon_ws/src/${localWorkspaceFolderBasename},type=bind",
+    "workspaceFolder": "/home/ubuntu/colcon_ws"
 }
