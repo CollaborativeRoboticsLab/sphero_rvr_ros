@@ -7,5 +7,5 @@ The `bringup` package is typically responsible for starting up a robot system. T
 To start the bringup process for the Sphero RVR robot, you can use the following command:
 
 ```bash
-ros2 launch sphero_rvr_bringup bringup.launch
+ros2 launch sphero_rvr_bringup sphero_rvr_bringup.launch
 ```

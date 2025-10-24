@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <launch>
     <!-- robot -->
-    <include file="$(find sphero_rvr_control)launch/sphero_rvr_control.launch"/>
+    <include file="$(find-pkg-share sphero_rvr_control)/launch/sphero_rvr_control.launch"/>
 
     <!-- controllers -->
-    <include file="$(find sphero_rvr_controllers)launch/sphero_rvr_controllers.launch"/>
+    <include file="$(find-pkg-share sphero_rvr_controllers)/launch/sphero_rvr_controllers.launch"/>
 
 </launch>

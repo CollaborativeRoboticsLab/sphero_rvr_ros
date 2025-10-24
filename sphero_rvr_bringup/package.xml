@@ -1,19 +1,23 @@
 <?xml version="1.0"?>
-<package format="2">
+<package format="3">
   <name>sphero_rvr_bringup</name>
-  <version>0.0.0</version>
+  <version>1.0.0</version>
   <description>The sphero_rvr_bringup package</description>
 
-  <maintainer email="mik-p@github.com">mik p</maintainer>
-
   <license>MIT</license>
+  <maintainer email="mppritchard3@hotmail.com">mik-p</maintainer>
+  <author email="mppritchard3@hotmail.com">mik p</author>
 
-  <author email="mik-p@github.com">mik p</author>
+  <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <buildtool_depend>catkin</buildtool_depend>
+  <!-- Runtime dependencies -->
+  <exec_depend>sphero_rvr_control</exec_depend>
+  <exec_depend>sphero_rvr_controllers</exec_depend>
+  <exec_depend>rosbridge_server</exec_depend>
+  <!-- TODO: robot_upstart is ROS1-only. Replace with systemd or launch mechanisms in ROS2 if needed. -->
+  <!-- <exec_depend>robot_upstart</exec_depend> -->
 
-  <depend>sphero_rvr_control</depend>
-  <depend>sphero_rvr_controllers</depend>
-  <depend>rosbridge_server</depend>
-  <depend>robot_upstart</depend>
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
 </package>
