@@ -4,6 +4,14 @@
   <arg name="teleop_joy_config" default="$(find-pkg-share sphero_rvr_controllers)/config/joy_config.yaml"/>
   <arg name="twist_mux_config" default="$(find-pkg-share sphero_rvr_controllers)/config/twist_mux.yaml"/>
 
+  <!-- spawn joint state broadcaster -->
+  <node pkg="controller_manager" exec="spawner" name="joint_state_broadcaster_spawner"
+        args="joint_state_broadcaster"/>
+
+  <!-- spawn diff drive controller -->
+  <node pkg="controller_manager" exec="spawner" name="diff_drive_controller_spawner"
+    args="diff_drive_controller --param-file $(find-pkg-share sphero_rvr_controllers)/config/diff_drive_controller.yaml"/>
+
   <!-- joy driver -->
   <node pkg="joy" exec="joy_node" name="joy_node">
     <param name="device_id" value="$(var joy_dev)"/>

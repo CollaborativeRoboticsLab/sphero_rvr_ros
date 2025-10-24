@@ -1,8 +1,8 @@
-# Controllers
+# sphero rvr controllers
 
 The `controllers` package is responsible for managing the robot's controllers. This may include PID controllers, trajectory controllers, and other types of control systems.
 
-## Controllers
+## controllers
 
 The sphero rvr robot is skid steered. Therefore, a `differential_drive_controller` is used to manage the movement of the robot. This controller takes in velocity commands and translates them into individual wheel speeds for the left and right wheels.
 
@@ -15,5 +15,5 @@ The controllers are multiplexed using the `twist_mux` package.
 Teleop and joy control are also provided by controllers. To launch the controllers, use the following command:
 
 ```bash
-ros2 launch sphero_rvr_controllers controllers.launch
+ros2 launch sphero_rvr_controllers sphero_rvr_controllers.launch
 ```
