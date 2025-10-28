@@ -3,7 +3,7 @@
 
     <xacro:macro name="wheel" params="name parent direction:=1 *origin">
 
-        <xacro:include filename="package://sphero_rvr_description/urdf/geometry.urdf.xacro" />
+        <xacro:include filename="$(find sphero_rvr_description)/urdf/geometry.urdf.xacro" />
 
         <joint name="${name}_joint" type="continuous" >
             <parent link="${parent}" />

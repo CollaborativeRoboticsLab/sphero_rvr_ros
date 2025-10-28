@@ -1,0 +1,7 @@
+<library path="sphero_rvr_control">
+  <class name="sphero_rvr_control/SpheroRvrHardwareInterface" type="sphero_rvr_control::SpheroRvrHardwareInterface" base_class_type="hardware_interface::SystemInterface">
+    <description>
+      Hardware interface for Sphero RVR robot using ros2_control. Manages drive wheels communicates with the Sphero RVR hardware.
+    </description>
+  </class>
+</library>

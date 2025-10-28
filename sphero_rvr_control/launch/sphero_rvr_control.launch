@@ -1,9 +1,11 @@
 <?xml version="1.0"?>
 <launch>
-    <!-- robot -->
-    <include file="$(find sphero_rvr_description)launch/robot.launch"/>
-    <include file="$(find sphero_rvr_description)launch/state_publisher.launch"/>
+    <!-- robot state -->
+    <include file="$(find-pkg-share sphero_rvr_description)/launch/robot.launch"/>
 
-    <!-- rvr driver -->
-    <include file="$(find sphero_rvr_driver)launch/sphero_rvr_driver_py.launch" />
+    <!-- rvr hardware -->
+    <node pkg="controller_manager" exec="ros2_control_node" name="controller_manager">
+        <param name="robot_description" value="$(command 'xacro $(find-pkg-share sphero_rvr_description)/urdf/sphero_rvr.urdf.xacro')"/>
+        <param from="$(find-pkg-share sphero_rvr_control)/config/control.yaml"/>
+    </node>
 </launch>

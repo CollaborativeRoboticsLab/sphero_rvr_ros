@@ -15,6 +15,5 @@ ROS2 meta package containing an implementation of a Sphero RVR robot using ROS2 
 Some interesting packages in this application are:
 
 - `sphero_rvr_description`: URDF description of the RVR robot.
-- `sphero_rvr_driver`: ROS2 node that interfaces with the RVR robot using the sphero-rvr-sdk.
 - `sphero_rvr_control`: ROS2 control configuration for the RVR robot, implements sphero serial protocol.
 - `sphero_rvr_controllers`: ROS2 node that provides a simple control interface for the RVR robot.

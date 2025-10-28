@@ -1,16 +1,26 @@
 <?xml version="1.0"?>
-<package format="2">
+<package format="3">
   <name>sphero_rvr_control</name>
-  <version>0.0.1</version>
+  <version>1.0.0</version>
   <description>The sphero_rvr_control package</description>
 
-  <maintainer email="mppritchard3@hotmail.com">mik-p</maintainer>
-
   <license>MIT</license>
+  <maintainer email="mppritchard3@hotmail.com">mik-p</maintainer>
+  <author email="mppritchard3@hotmail.com">mik p</author>
 
-  <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <depend>sphero_rvr_driver</depend>
-  <depend>sphero_rvr_description</depend>
+  <depend>hardware_interface</depend>
+  <depend>pluginlib</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_lifecycle</depend>
+  <depend>ros2_control</depend>
 
+  <exec_depend>controller_manager</exec_depend>
+  <exec_depend>sphero_rvr_description</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+    <hardware_interface plugin="${prefix}/sphero_rvr_control.xml"/>
+  </export>
 </package>
