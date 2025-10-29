@@ -2,17 +2,16 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="track_robot">
 
     <!--common-->
-    <xacro:include filename="package://sphero_rvr_description/urdf/common.urdf.xacro" />
-    <xacro:include filename="package://sphero_rvr_description/urdf/materials.urdf.xacro" />
-    <xacro:include filename="package://sphero_rvr_description/urdf/geometry.urdf.xacro" />
+    <xacro:include filename="$(find sphero_rvr_description)/urdf/common.urdf.xacro" />
+    <xacro:include filename="$(find sphero_rvr_description)/urdf/materials.urdf.xacro" />
+    <xacro:include filename="$(find sphero_rvr_description)/urdf/geometry.urdf.xacro" />
 
     <!-- parts -->
-    <xacro:include filename="package://sphero_rvr_description/urdf/body.urdf.xacro" />
-    <xacro:include filename="package://sphero_rvr_description/urdf/wheel.urdf.xacro" />
+    <xacro:include filename="$(find sphero_rvr_description)/urdf/body.urdf.xacro" />
+    <xacro:include filename="$(find sphero_rvr_description)/urdf/wheel.urdf.xacro" />
 
     <!-- urg laser -->
-    <!-- TODO: Verify package provides this xacro in ROS2; adjust to urg_node2 if needed -->
-    <xacro:include filename="package://urg_node/urdf/hokuyo_ust10.urdf.xacro" />
+    <xacro:include filename="$(find urg_node)/urdf/hokuyo_ust10.urdf.xacro" />
 
 
     <!-- dummy base link no inertia to satisfy kdl -->
@@ -63,6 +62,7 @@
     </gazebo>
 
     <!-- imu -->
+    <!-- TODO: test imu in ros2 sim -->
     <gazebo reference="base_link">
         <sensor type="imu" name="imu_sensor">
             <always_on>true</always_on>
@@ -76,4 +76,39 @@
             </plugin>
         </sensor>
     </gazebo>
+
+    <!-- ros2_control hardware interface and joint interfaces -->
+    <ros2_control name="SpheroRvrSystem" type="system">
+        <hardware>
+            <plugin>sphero_rvr_control/SpheroRvrHardwareInterface</plugin>
+            <param name="simulated">false</param>
+            <param name="device_port">/dev/serial0</param>
+            <param name="baud_rate">115200</param>
+            <param name="max_wheel_velocity_rad_s">10.0</param>
+            <!-- encoder ticks per revolution -->
+            <param name="ticks_per_revolution">4096</param>
+        </hardware>
+
+        <!-- velocity command and state interfaces for each wheel joint -->
+        <joint name="left_track_back_wheel_joint">
+            <command_interface name="velocity"/>
+            <state_interface name="velocity"/>
+            <state_interface name="position"/>
+        </joint>
+        <joint name="left_track_front_wheel_joint">
+            <command_interface name="velocity"/>
+            <state_interface name="velocity"/>
+            <state_interface name="position"/>
+        </joint>
+        <joint name="right_track_back_wheel_joint">
+            <command_interface name="velocity"/>
+            <state_interface name="velocity"/>
+            <state_interface name="position"/>
+        </joint>
+        <joint name="right_track_front_wheel_joint">
+            <command_interface name="velocity"/>
+            <state_interface name="velocity"/>
+            <state_interface name="position"/>
+        </joint>
+    </ros2_control>
 </robot>
