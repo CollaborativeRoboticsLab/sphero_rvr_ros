@@ -16,6 +16,7 @@
   <exec_depend>teleop_twist_joy</exec_depend>
   <exec_depend>twist_mux</exec_depend>
   <exec_depend>interactive_marker_twist_server</exec_depend>
+  <exec_depend>twist_stamper</exec_depend>
   <exec_depend>sphero_rvr_control</exec_depend>
 
   <export>

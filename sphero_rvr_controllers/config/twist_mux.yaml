@@ -10,7 +10,7 @@
         timeout: 0.5
         priority: 90
       interactive_marker:
-        topic: diff_drive_marker/cmd_vel
+        topic: diff_drive_marker/cmd_vel_stamped
         timeout: 0.5
         priority: 20
       nav:
