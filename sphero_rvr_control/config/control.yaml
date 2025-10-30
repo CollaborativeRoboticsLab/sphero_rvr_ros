@@ -10,7 +10,7 @@
 
     # override the ros2_control hardware settings provided in urdf
     hardware:
-      simulated: true # set to true to use a simulated RVR hardware interface
+      simulated: false # set to true to use a simulated RVR hardware interface
       # Production default: Raspberry Pi primary UART alias
       device_port: "/dev/serial0"
       baud_rate: 115200
