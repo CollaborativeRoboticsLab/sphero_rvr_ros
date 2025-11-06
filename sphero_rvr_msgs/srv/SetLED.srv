@@ -1,0 +1,9 @@
+# Set LEDs (user-controllable)
+# Values are in range [0, 255]
+
+uint8 r
+uint8 g
+uint8 b
+---
+bool success
+string message
