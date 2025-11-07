@@ -1,0 +1,44 @@
+FROM ros:jazzy
+
+RUN apt-get update && apt-get upgrade -y \
+    && apt-get install -y \
+    sudo \
+    build-essential \
+    git \
+    python3-pip \
+    && echo "ubuntu ALL=\(root\) NOPASSWD:ALL" > /etc/sudoers.d/ubuntu \
+    && chmod 0440 /etc/sudoers.d/ubuntu \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Switch from root to user
+USER ubuntu
+
+# Rosdep update
+RUN rosdep update
+
+# Source the ROS setup file
+RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> ~/.bashrc
+
+WORKDIR /home/ubuntu/colcon_ws/src
+
+# clone hardware driver repository
+RUN git clone ${RVR_DRIVER_SOURCE}
+
+# copy source code
+COPY . ./sphero_rvr_ros
+
+# go back to workspace root
+WORKDIR /home/ubuntu/colcon_ws
+
+# install dependencies
+RUN sudo apt-get update && rosdep install --from-paths src --ignore-src -r -y \
+    && sudo apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# build the workspace
+RUN . /opt/ros/${ROS_DISTRO}/setup.bash && \
+    colcon build --symlink-install
+
+# source the workspace
+RUN echo "source /home/ubuntu/colcon_ws/install/setup.bash" >> ~/.bashrc

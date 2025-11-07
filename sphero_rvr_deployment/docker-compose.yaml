@@ -1,0 +1,27 @@
+# Docker Compose configuration for pi based deployment of RVR with serial device access
+version: "3.8"
+services:
+  rvr_deployment:
+    build:
+      context: ..
+      dockerfile: dockerfile
+    command: >
+      ros2 launch sphero_rvr_bringup sphero_rvr_bringup.launch
+    environment:
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
+      - RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-rmw_cyclonedds_cpp}
+      - SERIAL_PORT=${SERIAL_PORT:-/dev/serial0}
+      - I2C_BUS=${I2C_BUS:-/dev/i2c-1}
+      - MQTT_BROKER=${MQTT_BROKER:-localhost}
+      - MQTT_PORT=${MQTT_PORT:-1883}
+      - MQTT_TOPIC_PREFIX=${MQTT_TOPIC_PREFIX:-fleet/rvr}
+      - ROBOT_ID=${ROBOT_ID:-rvr-001}
+    restart: unless-stopped
+    privileged: true
+    network_mode: host
+    volumes:
+      - /dev:/dev
+    devices:
+      - "/dev/serial0:/dev/serial0"
+    group_add:
+      - dialout

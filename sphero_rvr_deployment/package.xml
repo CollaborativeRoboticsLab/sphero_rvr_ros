@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>sphero_rvr_ros</name>
+  <name>sphero_rvr_deployment</name>
   <version>1.0.0</version>
-  <description>The sphero_rvr_ros metapackage</description>
+  <description>Deployment tools and systemd services for Sphero RVR ROS 2 stack</description>
 
   <license>MIT</license>
   <maintainer email="mppritchard3@hotmail.com">mik-p</maintainer>
@@ -10,13 +10,7 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <exec_depend>sphero_rvr_msgs</exec_depend>
-  <exec_depend>sphero_rvr_description</exec_depend>
-  <exec_depend>sphero_rvr_control</exec_depend>
-  <exec_depend>sphero_rvr_controllers</exec_depend>
-  <exec_depend>sphero_rvr_navigation</exec_depend>
   <exec_depend>sphero_rvr_bringup</exec_depend>
-  <exec_depend>sphero_rvr_deployment</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>
