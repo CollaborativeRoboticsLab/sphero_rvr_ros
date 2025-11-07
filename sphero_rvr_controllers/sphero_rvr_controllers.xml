@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<library path="sphero_rvr_controllers">
+  <class name="sphero_rvr_controllers/AmbientLightSensorBroadcaster"
+         type="sphero_rvr_controllers::AmbientLightSensorBroadcaster"
+         base_class_type="controller_interface::ControllerInterface">
+    <description>
+      broadcasts ambient light sensor data from hardware interface state to sensor_msgs/Illuminance topic.
+    </description>
+  </class>
+
+  <class name="sphero_rvr_controllers/ColorSensorBroadcaster"
+         type="sphero_rvr_controllers::ColorSensorBroadcaster"
+         base_class_type="controller_interface::ControllerInterface">
+    <description>
+      broadcasts RGBC color sensor data from hardware interface state to std_msgs/ColorRGBA topic.
+    </description>
+  </class>
+</library>
