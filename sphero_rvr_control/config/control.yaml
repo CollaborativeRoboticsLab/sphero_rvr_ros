@@ -1,6 +1,6 @@
 /**:
   ros__parameters:
-    update_rate: 50
+    update_rate: 25
 
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster

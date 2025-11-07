@@ -107,13 +107,17 @@
             <state_interface name="linear_acceleration.z"/>
         </sensor>
 
-        <!-- Light sensors -->
-        <sensor name="light_sensor">
+        <!-- Ambient light sensor -->
+        <sensor name="ambient_light_sensor">
             <state_interface name="ambient_light"/>
-            <state_interface name="color.r"/>
-            <state_interface name="color.g"/>
-            <state_interface name="color.b"/>
-            <state_interface name="color.c"/>
+        </sensor>
+
+        <!-- Color sensor -->
+        <sensor name="color_sensor">
+            <state_interface name="color_r"/>
+            <state_interface name="color_g"/>
+            <state_interface name="color_b"/>
+            <state_interface name="color_c"/>
         </sensor>
 
         <!-- velocity command and state interfaces for each wheel joint -->

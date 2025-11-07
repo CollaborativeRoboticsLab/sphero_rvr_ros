@@ -1,0 +1,5 @@
+color_sensor_broadcaster:
+  ros__parameters:
+    sensor_name: color_sensor
+    frame_id: base_link
+    max_color_value: 65535.0 # 16-bit color sensor

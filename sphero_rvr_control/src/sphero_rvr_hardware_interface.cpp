@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cmath>
 #include <limits>
+#include <random>
 #include <memory>
 #include <vector>
 
@@ -157,12 +158,9 @@ SpheroRvrHardwareInterface::on_configure(const rclcpp_lifecycle::State& /*previo
       "~/set_status_led", std::bind(&SpheroRvrHardwareInterface::set_status_led_callback, this, std::placeholders::_1,
                                     std::placeholders::_2));
 
-  RCLCPP_INFO(rclcpp::get_logger("SpheroRvrHardwareInterface"), "LED control services created: ~/set_headlight, "
-                                                                "~/set_status_led");
-
   if (!simulated_)
   {
-    // Initialize connection to Sphero RVR hardware (serial protocol)
+    // Initialize connection to Sphero RVR hardware
     rvr_ = std::make_unique<sphero_rvr_driver_cpp::RvrDriver>();
     if (!rvr_->connect(device_port_, baud_rate_))
     {
@@ -180,7 +178,6 @@ SpheroRvrHardwareInterface::on_configure(const rclcpp_lifecycle::State& /*previo
     hw_states_velocities_[i] = 0.0;
   }
 
-  RCLCPP_INFO(rclcpp::get_logger("SpheroRvrHardwareInterface"), "Successfully configured hardware interface");
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
@@ -197,8 +194,11 @@ std::vector<hardware_interface::StateInterface> SpheroRvrHardwareInterface::expo
         info_.joints[i].name, hardware_interface::HW_IF_VELOCITY, &hw_states_velocities_[i]));
   }
 
-  // IMU sensor state interfaces (if enabled and defined in URDF)
-  // Expected sensor name in URDF: "imu_sensor" under <sensor> tag
+  // Sensor state interfaces (match names defined in URDF)
+  // Supported:
+  //  - imu_sensor: orientation/velocity/acceleration
+  //  - ambient_light_sensor: ambient_light
+  //  - color_sensor: color_r, color_g, color_b, color_c
   for (const auto& sensor : info_.sensors)
   {
     if (sensor.name == "imu_sensor" && enable_imu_)
@@ -231,16 +231,24 @@ std::vector<hardware_interface::StateInterface> SpheroRvrHardwareInterface::expo
 
       RCLCPP_INFO(rclcpp::get_logger("SpheroRvrHardwareInterface"), "Exported IMU sensor state interfaces");
     }
-    else if (sensor.name == "light_sensor" && enable_light_sensors_)
+    else if (sensor.name == "ambient_light_sensor" && enable_light_sensors_)
     {
-      // Light sensor state interfaces
+      // Ambient-only interface for ambient_light_sensor
       state_interfaces.emplace_back(hardware_interface::StateInterface(sensor.name, "ambient_light", &light_ambient_));
-      state_interfaces.emplace_back(hardware_interface::StateInterface(sensor.name, "color.r", &light_r_));
-      state_interfaces.emplace_back(hardware_interface::StateInterface(sensor.name, "color.g", &light_g_));
-      state_interfaces.emplace_back(hardware_interface::StateInterface(sensor.name, "color.b", &light_b_));
-      state_interfaces.emplace_back(hardware_interface::StateInterface(sensor.name, "color.c", &light_c_));
 
-      RCLCPP_INFO(rclcpp::get_logger("SpheroRvrHardwareInterface"), "Exported light sensor state interfaces");
+      RCLCPP_INFO(rclcpp::get_logger("SpheroRvrHardwareInterface"),
+                  "Exported ambient light sensor state interface for '%s'", sensor.name.c_str());
+    }
+    else if (sensor.name == "color_sensor" && enable_light_sensors_)
+    {
+      // Color-only interfaces for color_sensor (underscore naming)
+      state_interfaces.emplace_back(hardware_interface::StateInterface(sensor.name, "color_r", &light_r_));
+      state_interfaces.emplace_back(hardware_interface::StateInterface(sensor.name, "color_g", &light_g_));
+      state_interfaces.emplace_back(hardware_interface::StateInterface(sensor.name, "color_b", &light_b_));
+      state_interfaces.emplace_back(hardware_interface::StateInterface(sensor.name, "color_c", &light_c_));
+
+      RCLCPP_INFO(rclcpp::get_logger("SpheroRvrHardwareInterface"), "Exported color sensor state interfaces for '%s'",
+                  sensor.name.c_str());
     }
   }
 
@@ -278,9 +286,6 @@ SpheroRvrHardwareInterface::on_activate(const rclcpp_lifecycle::State& /*previou
     // Initialize battery door LEDs based on current battery level
     // Will be updated periodically in read()
     rvr_->set_battery_leds_rgb(0, 255, 0);  // Start with green
-
-    RCLCPP_INFO(rclcpp::get_logger("SpheroRvrHardwareInterface"), "Hardware-managed LEDs initialized (brakelights=red, "
-                                                                  "undercarriage=white, battery=green)");
 
     // Configure and start IMU streaming with realtime-safe callback
     if (enable_imu_)
@@ -382,7 +387,29 @@ hardware_interface::return_type SpheroRvrHardwareInterface::read(const rclcpp::T
       hw_states_positions_[i] = pos;
       hw_states_velocities_[i] = v;
     }
-    // Simulated sensors: leave at defaults or add noise if desired
+    // Simulated light sensors: Gaussian noise around fixed means (no time dependence)
+    if (enable_light_sensors_)
+    {
+      static thread_local std::mt19937 rng{ std::random_device{}() };
+      auto clamp = [](double v, double lo, double hi) {
+        if (v < lo)
+          return lo;
+        if (v > hi)
+          return hi;
+        return v;
+      };
+      auto gaussian = [&](double mean, double stddev, double lo, double hi) {
+        std::normal_distribution<double> dist(mean, stddev);
+        return clamp(dist(rng), lo, hi);
+      };
+
+      // Means and stddevs chosen to be stable but non-constant
+      light_ambient_ = gaussian(100.0, 5.0, 0.0, 500.0);
+      light_r_ = gaussian(1000.0, 50.0, 0.0, 4095.0);
+      light_g_ = gaussian(2000.0, 50.0, 0.0, 4095.0);
+      light_b_ = gaussian(3000.0, 50.0, 0.0, 4095.0);
+      light_c_ = gaussian(3500.0, 80.0, 0.0, 4095.0);
+    }
     return hardware_interface::return_type::OK;
   }
 

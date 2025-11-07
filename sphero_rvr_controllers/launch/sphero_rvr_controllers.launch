@@ -12,6 +12,18 @@
   <node pkg="controller_manager" exec="spawner" name="diff_drive_controller_spawner"
     args="diff_drive_controller --param-file $(find-pkg-share sphero_rvr_controllers)/config/diff_drive_controller.yaml"/>
 
+  <!-- spawn IMU sensor broadcaster -->
+  <node pkg="controller_manager" exec="spawner" name="imu_sensor_broadcaster_spawner"
+        args="imu_sensor_broadcaster --param-file $(find-pkg-share sphero_rvr_controllers)/config/imu_broadcaster.yaml"/>
+
+  <!-- spawn ambient light sensor broadcaster -->
+  <node pkg="controller_manager" exec="spawner" name="ambient_light_broadcaster_spawner"
+        args="ambient_light_broadcaster --param-file $(find-pkg-share sphero_rvr_controllers)/config/ambient_light_broadcaster.yaml"/>
+
+  <!-- spawn color sensor broadcaster -->
+  <node pkg="controller_manager" exec="spawner" name="color_sensor_broadcaster_spawner"
+        args="color_sensor_broadcaster --param-file $(find-pkg-share sphero_rvr_controllers)/config/color_sensor_broadcaster.yaml"/>
+
   <!-- joy driver -->
   <node pkg="joy" exec="joy_node" name="joy_node">
     <param name="device_name" value="$(var joy_dev)"/>
