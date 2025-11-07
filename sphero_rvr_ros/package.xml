@@ -10,6 +10,7 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
+  <exec_depend>sphero_rvr_msgs</exec_depend>
   <exec_depend>sphero_rvr_description</exec_depend>
   <exec_depend>sphero_rvr_control</exec_depend>
   <exec_depend>sphero_rvr_controllers</exec_depend>

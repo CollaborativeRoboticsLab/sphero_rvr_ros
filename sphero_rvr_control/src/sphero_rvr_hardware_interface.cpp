@@ -1,5 +1,6 @@
 #include <sphero_rvr_control/sphero_rvr_hardware_interface.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <limits>
@@ -39,6 +40,17 @@ SpheroRvrHardwareInterface::on_init(const hardware_interface::HardwareComponentI
       RCLCPP_WARN(rclcpp::get_logger("SpheroRvrHardwareInterface"),
                   "Invalid max_wheel_velocity_rad_s; using default %.2f", max_wheel_velocity_rad_s_);
     }
+  }
+  // Optional sensor enables
+  if (params.hardware_info.hardware_parameters.count("enable_imu"))
+  {
+    std::string val = params.hardware_info.hardware_parameters.at("enable_imu");
+    enable_imu_ = (val == "true" || val == "1");
+  }
+  if (params.hardware_info.hardware_parameters.count("enable_light_sensors"))
+  {
+    std::string val = params.hardware_info.hardware_parameters.at("enable_light_sensors");
+    enable_light_sensors_ = (val == "true" || val == "1");
   }
   // Encoder calibration: ticks per revolution
   if (params.hardware_info.hardware_parameters.count("ticks_per_revolution"))
@@ -116,6 +128,8 @@ SpheroRvrHardwareInterface::on_configure(const rclcpp_lifecycle::State& /*previo
   node->declare_parameter<bool>("hardware.simulated", simulated_);
   node->declare_parameter<double>("hardware.max_wheel_velocity_rad_s", max_wheel_velocity_rad_s_);
   node->declare_parameter<int>("hardware.ticks_per_revolution", ticks_per_revolution_);
+  node->declare_parameter<double>("hardware.sensor_poll_hz", sensor_poll_hz_);
+  node->declare_parameter<int>("hardware.imu_hz", imu_hz_);
 
   // get parameters
   node->get_parameter("hardware.device_port", device_port_);
@@ -123,18 +137,33 @@ SpheroRvrHardwareInterface::on_configure(const rclcpp_lifecycle::State& /*previo
   node->get_parameter("hardware.simulated", simulated_);
   node->get_parameter("hardware.max_wheel_velocity_rad_s", max_wheel_velocity_rad_s_);
   ticks_per_revolution_ = node->get_parameter("hardware.ticks_per_revolution").as_int();
+  sensor_poll_hz_ = node->get_parameter("hardware.sensor_poll_hz").as_double();
+  imu_hz_ = node->get_parameter("hardware.imu_hz").as_int();
 
   // log changed parameters
   RCLCPP_INFO(rclcpp::get_logger("SpheroRvrHardwareInterface"),
               "Using parameters - device_port: %s, baud_rate: %d, simulated: %s, max_wheel_velocity_rad_s: %.2f, "
-              "ticks_per_revolution: %.2f",
+              "ticks_per_revolution: %.2f, imu_hz: %d, sensor_poll_hz: %.2f",
               device_port_.c_str(), baud_rate_, simulated_ ? "true" : "false", max_wheel_velocity_rad_s_,
-              ticks_per_revolution_);
+              ticks_per_revolution_, imu_hz_, sensor_poll_hz_);
+
+  // Create LED control services (realtime-safe via buffer)
+  // Only user-controllable LEDs have services; hardware-managed LEDs are automatic
+  set_headlight_service_ = node->create_service<sphero_rvr_msgs::srv::SetLED>(
+      "~/set_headlight", std::bind(&SpheroRvrHardwareInterface::set_headlight_callback, this, std::placeholders::_1,
+                                   std::placeholders::_2));
+
+  set_status_led_service_ = node->create_service<sphero_rvr_msgs::srv::SetLED>(
+      "~/set_status_led", std::bind(&SpheroRvrHardwareInterface::set_status_led_callback, this, std::placeholders::_1,
+                                    std::placeholders::_2));
+
+  RCLCPP_INFO(rclcpp::get_logger("SpheroRvrHardwareInterface"), "LED control services created: ~/set_headlight, "
+                                                                "~/set_status_led");
 
   if (!simulated_)
   {
     // Initialize connection to Sphero RVR hardware (serial protocol)
-    rvr_ = std::make_unique<RvrDriver>();
+    rvr_ = std::make_unique<sphero_rvr_driver_cpp::RvrDriver>();
     if (!rvr_->connect(device_port_, baud_rate_))
     {
       RCLCPP_ERROR(rclcpp::get_logger("SpheroRvrHardwareInterface"), "Failed to open serial port %s at %d baud",
@@ -158,6 +187,8 @@ SpheroRvrHardwareInterface::on_configure(const rclcpp_lifecycle::State& /*previo
 std::vector<hardware_interface::StateInterface> SpheroRvrHardwareInterface::export_state_interfaces()
 {
   std::vector<hardware_interface::StateInterface> state_interfaces;
+
+  // Joint position and velocity states
   for (size_t i = 0; i < info_.joints.size(); i++)
   {
     state_interfaces.emplace_back(hardware_interface::StateInterface(
@@ -166,12 +197,61 @@ std::vector<hardware_interface::StateInterface> SpheroRvrHardwareInterface::expo
         info_.joints[i].name, hardware_interface::HW_IF_VELOCITY, &hw_states_velocities_[i]));
   }
 
+  // IMU sensor state interfaces (if enabled and defined in URDF)
+  // Expected sensor name in URDF: "imu_sensor" under <sensor> tag
+  for (const auto& sensor : info_.sensors)
+  {
+    if (sensor.name == "imu_sensor" && enable_imu_)
+    {
+      // Orientation quaternion (w, x, y, z)
+      state_interfaces.emplace_back(
+          hardware_interface::StateInterface(sensor.name, "orientation.w", &imu_orientation_[0]));
+      state_interfaces.emplace_back(
+          hardware_interface::StateInterface(sensor.name, "orientation.x", &imu_orientation_[1]));
+      state_interfaces.emplace_back(
+          hardware_interface::StateInterface(sensor.name, "orientation.y", &imu_orientation_[2]));
+      state_interfaces.emplace_back(
+          hardware_interface::StateInterface(sensor.name, "orientation.z", &imu_orientation_[3]));
+
+      // Angular velocity (rad/s)
+      state_interfaces.emplace_back(
+          hardware_interface::StateInterface(sensor.name, "angular_velocity.x", &imu_angular_velocity_[0]));
+      state_interfaces.emplace_back(
+          hardware_interface::StateInterface(sensor.name, "angular_velocity.y", &imu_angular_velocity_[1]));
+      state_interfaces.emplace_back(
+          hardware_interface::StateInterface(sensor.name, "angular_velocity.z", &imu_angular_velocity_[2]));
+
+      // Linear acceleration (m/s²)
+      state_interfaces.emplace_back(
+          hardware_interface::StateInterface(sensor.name, "linear_acceleration.x", &imu_linear_acceleration_[0]));
+      state_interfaces.emplace_back(
+          hardware_interface::StateInterface(sensor.name, "linear_acceleration.y", &imu_linear_acceleration_[1]));
+      state_interfaces.emplace_back(
+          hardware_interface::StateInterface(sensor.name, "linear_acceleration.z", &imu_linear_acceleration_[2]));
+
+      RCLCPP_INFO(rclcpp::get_logger("SpheroRvrHardwareInterface"), "Exported IMU sensor state interfaces");
+    }
+    else if (sensor.name == "light_sensor" && enable_light_sensors_)
+    {
+      // Light sensor state interfaces
+      state_interfaces.emplace_back(hardware_interface::StateInterface(sensor.name, "ambient_light", &light_ambient_));
+      state_interfaces.emplace_back(hardware_interface::StateInterface(sensor.name, "color.r", &light_r_));
+      state_interfaces.emplace_back(hardware_interface::StateInterface(sensor.name, "color.g", &light_g_));
+      state_interfaces.emplace_back(hardware_interface::StateInterface(sensor.name, "color.b", &light_b_));
+      state_interfaces.emplace_back(hardware_interface::StateInterface(sensor.name, "color.c", &light_c_));
+
+      RCLCPP_INFO(rclcpp::get_logger("SpheroRvrHardwareInterface"), "Exported light sensor state interfaces");
+    }
+  }
+
   return state_interfaces;
 }
 
 std::vector<hardware_interface::CommandInterface> SpheroRvrHardwareInterface::export_command_interfaces()
 {
   std::vector<hardware_interface::CommandInterface> command_interfaces;
+
+  // Joint velocity commands
   for (size_t i = 0; i < info_.joints.size(); i++)
   {
     command_interfaces.emplace_back(hardware_interface::CommandInterface(
@@ -186,7 +266,78 @@ SpheroRvrHardwareInterface::on_activate(const rclcpp_lifecycle::State& /*previou
 {
   RCLCPP_INFO(rclcpp::get_logger("SpheroRvrHardwareInterface"), "Activating hardware interface...");
 
-  RCLCPP_INFO(rclcpp::get_logger("SpheroRvrHardwareInterface"), "Successfully activated hardware interface");
+  // Initialize hardware-managed LEDs
+  if (rvr_ && !simulated_)
+  {
+    // Set rear brakelights to red (indicate reverse direction)
+    rvr_->set_brakelights_rgb(255, 0, 0);
+
+    // Set undercarriage white LED (illuminate floor for color sensor)
+    rvr_->set_undercarriage_white(255);
+
+    // Initialize battery door LEDs based on current battery level
+    // Will be updated periodically in read()
+    rvr_->set_battery_leds_rgb(0, 255, 0);  // Start with green
+
+    RCLCPP_INFO(rclcpp::get_logger("SpheroRvrHardwareInterface"), "Hardware-managed LEDs initialized (brakelights=red, "
+                                                                  "undercarriage=white, battery=green)");
+
+    // Configure and start IMU streaming with realtime-safe callback
+    if (enable_imu_)
+    {
+      using ImuSample = sphero_rvr_driver_cpp::RvrDriver::ImuSample;
+      rvr_->set_imu_callback([this](const ImuSample& d) {
+        // Convert degrees to radians
+        const double deg2rad = M_PI / 180.0;
+        const double roll = static_cast<double>(d.roll_deg) * deg2rad;    // x
+        const double pitch = static_cast<double>(d.pitch_deg) * deg2rad;  // y
+        const double yaw = static_cast<double>(d.yaw_deg) * deg2rad;      // z
+
+        // Build quaternion from ZYX (yaw, pitch, roll)
+        const double cy = std::cos(yaw * 0.5);
+        const double sy = std::sin(yaw * 0.5);
+        const double cp = std::cos(pitch * 0.5);
+        const double sp = std::sin(pitch * 0.5);
+        const double cr = std::cos(roll * 0.5);
+        const double sr = std::sin(roll * 0.5);
+
+        sphero_rvr_control::SpheroRvrHardwareInterface::ImuRtState s;
+        // Quaternion (w, x, y, z)
+        s.q[0] = cr * cp * cy + sr * sp * sy;  // w
+        s.q[1] = sr * cp * cy - cr * sp * sy;  // x
+        s.q[2] = cr * sp * cy + sr * cp * sy;  // y
+        s.q[3] = cr * cp * sy - sr * sp * cy;  // z
+
+        // Angular velocity (deg/s -> rad/s)
+        s.w[0] = static_cast<double>(d.gx_dps) * deg2rad;
+        s.w[1] = static_cast<double>(d.gy_dps) * deg2rad;
+        s.w[2] = static_cast<double>(d.gz_dps) * deg2rad;
+
+        // Linear acceleration (g -> m/s^2)
+        const double g_to_ms2 = 9.80665;
+        s.a[0] = static_cast<double>(d.ax_g) * g_to_ms2;
+        s.a[1] = static_cast<double>(d.ay_g) * g_to_ms2;
+        s.a[2] = static_cast<double>(d.az_g) * g_to_ms2;
+
+        // Write to realtime buffer (lock-free)
+        imu_rt_buffer_.writeFromNonRT(s);
+      });
+
+      // Enable full IMU suite (angles + gyro + accel) at configured Hz
+      const int hz = std::max(1, imu_hz_);
+      const uint16_t period_ms = static_cast<uint16_t>(std::max(33, 1000 / hz));
+      if (!rvr_->enable_imu_suite_streaming(period_ms))
+      {
+        RCLCPP_WARN(rclcpp::get_logger("SpheroRvrHardwareInterface"), "Failed to start IMU streaming");
+      }
+      else
+      {
+        RCLCPP_INFO(rclcpp::get_logger("SpheroRvrHardwareInterface"), "IMU streaming started at ~%d Hz",
+                    1000 / period_ms);
+      }
+    }
+  }
+
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
@@ -198,7 +349,18 @@ SpheroRvrHardwareInterface::on_deactivate(const rclcpp_lifecycle::State& /*previ
   // Stop motors
   if (rvr_)
   {
-    rvr_->stop();
+    rvr_->drive_stop();
+
+    // Stop IMU streaming if enabled
+    if (enable_imu_)
+    {
+      (void)rvr_->stop_imu_streaming();
+      (void)rvr_->clear_imu_streaming();
+    }
+
+    // Release all LED control back to default behavior
+    rvr_->release_led_requests();
+
     rvr_->disconnect();
   }
 
@@ -220,10 +382,11 @@ hardware_interface::return_type SpheroRvrHardwareInterface::read(const rclcpp::T
       hw_states_positions_[i] = pos;
       hw_states_velocities_[i] = v;
     }
+    // Simulated sensors: leave at defaults or add noise if desired
     return hardware_interface::return_type::OK;
   }
 
-  // Get encoder counts directly from hardware
+  // Real hardware: read encoders
   if (rvr_)
   {
     int32_t left_ticks, right_ticks;
@@ -288,6 +451,90 @@ hardware_interface::return_type SpheroRvrHardwareInterface::read(const rclcpp::T
         hw_states_velocities_[i] = (dt > 0.0) ? (right_delta_rad / dt) : 0.0;
       }
     }
+
+    // Read light sensors (ambient + RGBC) at <= sensor_poll_hz_
+    if (enable_light_sensors_)
+    {
+      using clock = std::chrono::steady_clock;
+      static const auto min_interval = std::chrono::duration<double>(1.0 / std::max(0.1, sensor_poll_hz_));
+      const auto now_tp = clock::now();
+      if (last_light_read_.time_since_epoch().count() == 0 || (now_tp - last_light_read_) >= min_interval)
+      {
+        float ambient = 0.0f;
+        uint16_t r = 0, g = 0, b = 0, c = 0;
+        if (rvr_->get_ambient_light(ambient))
+        {
+          light_ambient_ = static_cast<double>(ambient);
+        }
+        if (rvr_->get_rgbc(r, g, b, c))
+        {
+          light_r_ = static_cast<double>(r);
+          light_g_ = static_cast<double>(g);
+          light_b_ = static_cast<double>(b);
+          light_c_ = static_cast<double>(c);
+        }
+        last_light_read_ = now_tp;
+      }
+    }
+
+    // Read battery and update indicator LEDs at <= sensor_poll_hz_
+    {
+      using clock = std::chrono::steady_clock;
+      static const auto min_interval = std::chrono::duration<double>(1.0 / std::max(0.1, sensor_poll_hz_));
+      const auto now_tp = clock::now();
+      if (last_battery_read_.time_since_epoch().count() == 0 || (now_tp - last_battery_read_) >= min_interval)
+      {
+        uint8_t battery_pct = 0;
+        if (rvr_->get_battery_percentage(battery_pct))
+        {
+          battery_percentage_.store(battery_pct);
+
+          // Color code battery door LEDs based on percentage
+          uint8_t led_r = 0, led_g = 0, led_b = 0;
+          if (battery_pct > 60)
+          {
+            // Green: good battery
+            led_g = 255;
+          }
+          else if (battery_pct > 40)
+          {
+            // Yellow: medium battery
+            led_r = 255;
+            led_g = 255;
+          }
+          else if (battery_pct > 20)
+          {
+            // Orange: low battery
+            led_r = 255;
+            led_g = 128;
+          }
+          else
+          {
+            // Red: critical battery
+            led_r = 255;
+          }
+
+          rvr_->set_battery_leds_rgb(led_r, led_g, led_b);
+        }
+        last_battery_read_ = now_tp;
+      }
+    }
+
+    // IMU: copy latest realtime sample (if streaming enabled)
+    if (enable_imu_)
+    {
+      auto sample = *imu_rt_buffer_.readFromRT();
+      imu_orientation_[0] = sample.q[0];
+      imu_orientation_[1] = sample.q[1];
+      imu_orientation_[2] = sample.q[2];
+      imu_orientation_[3] = sample.q[3];
+      imu_angular_velocity_[0] = sample.w[0];
+      imu_angular_velocity_[1] = sample.w[1];
+      imu_angular_velocity_[2] = sample.w[2];
+      imu_linear_acceleration_[0] = sample.a[0];
+      imu_linear_acceleration_[1] = sample.a[1];
+      imu_linear_acceleration_[2] = sample.a[2];
+    }
   }
 
   return hardware_interface::return_type::OK;
@@ -341,13 +588,84 @@ hardware_interface::return_type SpheroRvrHardwareInterface::write(const rclcpp::
 
   if (rvr_)
   {
-    (void)rvr_->set_raw_motors(left_mode, left_duty, right_mode, right_duty);
+    (void)rvr_->drive_raw_motors(left_mode, left_duty, right_mode, right_duty);
+  }
+
+  // Process user-controllable LED commands from realtime buffer (non-blocking)
+  LEDCommand led_cmd = *led_command_buffer_.readFromRT();
+  if (led_cmd.has_command && rvr_)
+  {
+    switch (led_cmd.target)
+    {
+      case LEDCommand::Target::HEADLIGHTS:
+        (void)rvr_->set_headlights_rgb(led_cmd.r, led_cmd.g, led_cmd.b);
+        RCLCPP_DEBUG(rclcpp::get_logger("SpheroRvrHardwareInterface"), "Headlights set to RGB(%u, %u, %u)", led_cmd.r,
+                     led_cmd.g, led_cmd.b);
+        break;
+
+      case LEDCommand::Target::STATUS_LED:
+        (void)rvr_->set_status_rgb(led_cmd.r, led_cmd.g, led_cmd.b);
+        RCLCPP_DEBUG(rclcpp::get_logger("SpheroRvrHardwareInterface"), "Status LED set to RGB(%u, %u, %u)", led_cmd.r,
+                     led_cmd.g, led_cmd.b);
+        break;
+
+      case LEDCommand::Target::NONE:
+      default:
+        break;
+    }
+
+    // Clear the command flag after processing
+    led_cmd.has_command = false;
+    led_command_buffer_.writeFromNonRT(led_cmd);
   }
 
   return hardware_interface::return_type::OK;
 }
 
+void SpheroRvrHardwareInterface::set_headlight_callback(
+    const std::shared_ptr<sphero_rvr_msgs::srv::SetLED::Request> request,
+    std::shared_ptr<sphero_rvr_msgs::srv::SetLED::Response> response)
+{
+  LEDCommand cmd;
+  cmd.target = LEDCommand::Target::HEADLIGHTS;
+  cmd.r = request->r;
+  cmd.g = request->g;
+  cmd.b = request->b;
+  cmd.has_command = true;
+
+  // Write to realtime buffer (lock-free, safe to call from service)
+  led_command_buffer_.writeFromNonRT(cmd);
+
+  response->success = true;
+  response->message = "Headlight command queued";
+
+  RCLCPP_DEBUG(rclcpp::get_logger("SpheroRvrHardwareInterface"), "Headlight command queued: RGB(%u, %u, %u)",
+               request->r, request->g, request->b);
+}
+
+void SpheroRvrHardwareInterface::set_status_led_callback(
+    const std::shared_ptr<sphero_rvr_msgs::srv::SetLED::Request> request,
+    std::shared_ptr<sphero_rvr_msgs::srv::SetLED::Response> response)
+{
+  LEDCommand cmd;
+  cmd.target = LEDCommand::Target::STATUS_LED;
+  cmd.r = request->r;
+  cmd.g = request->g;
+  cmd.b = request->b;
+  cmd.has_command = true;
+
+  // Write to realtime buffer (lock-free, safe to call from service)
+  led_command_buffer_.writeFromNonRT(cmd);
+
+  response->success = true;
+  response->message = "Status LED command queued";
+
+  RCLCPP_DEBUG(rclcpp::get_logger("SpheroRvrHardwareInterface"), "Status LED command queued: RGB(%u, %u, %u)",
+               request->r, request->g, request->b);
+}
+
 }  // namespace sphero_rvr_control
 
-#include "pluginlib/class_list_macros.hpp"
+#include <pluginlib/class_list_macros.hpp>
+
 PLUGINLIB_EXPORT_CLASS(sphero_rvr_control::SpheroRvrHardwareInterface, hardware_interface::SystemInterface)

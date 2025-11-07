@@ -12,14 +12,15 @@ find_package(hardware_interface REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
+find_package(realtime_tools REQUIRED)
+find_package(sphero_rvr_msgs REQUIRED)
+find_package(sphero_rvr_driver_cpp REQUIRED)
 
 # Hardware interface library
 add_library(
   ${PROJECT_NAME}
   SHARED
   src/sphero_rvr_hardware_interface.cpp
-  src/rvr_transport_serial.cpp
-  src/rvr_driver.cpp
 )
 target_include_directories(
   ${PROJECT_NAME}
@@ -32,6 +33,9 @@ ament_target_dependencies(
   pluginlib
   rclcpp
   rclcpp_lifecycle
+  realtime_tools
+  sphero_rvr_msgs
+  sphero_rvr_driver_cpp
 )
 
 # Export hardware plugin
@@ -69,6 +73,9 @@ ament_export_dependencies(
   pluginlib
   rclcpp
   rclcpp_lifecycle
+  realtime_tools
+  sphero_rvr_msgs
+  sphero_rvr_driver_cpp
 )
 
 ament_package()

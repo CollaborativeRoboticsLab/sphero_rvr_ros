@@ -62,7 +62,7 @@
     </gazebo>
 
     <!-- imu -->
-    <!-- TODO: test imu in ros2 sim -->
+    <!-- TODO test imu in ros2 sim -->
     <gazebo reference="base_link">
         <sensor type="imu" name="imu_sensor">
             <always_on>true</always_on>
@@ -87,7 +87,34 @@
             <param name="max_wheel_velocity_rad_s">10.0</param>
             <!-- encoder ticks per revolution -->
             <param name="ticks_per_revolution">4096</param>
+            <param name="enable_imu">true</param>
+            <param name="imu_hz">10</param>
+            <param name="enable_light_sensors">true</param>
+            <param name="sensor_poll_hz">2.0</param>
         </hardware>
+
+        <!-- IMU -->
+        <sensor name="imu_sensor">
+            <state_interface name="orientation.w"/>
+            <state_interface name="orientation.x"/>
+            <state_interface name="orientation.y"/>
+            <state_interface name="orientation.z"/>
+            <state_interface name="angular_velocity.x"/>
+            <state_interface name="angular_velocity.y"/>
+            <state_interface name="angular_velocity.z"/>
+            <state_interface name="linear_acceleration.x"/>
+            <state_interface name="linear_acceleration.y"/>
+            <state_interface name="linear_acceleration.z"/>
+        </sensor>
+
+        <!-- Light sensors -->
+        <sensor name="light_sensor">
+            <state_interface name="ambient_light"/>
+            <state_interface name="color.r"/>
+            <state_interface name="color.g"/>
+            <state_interface name="color.b"/>
+            <state_interface name="color.c"/>
+        </sensor>
 
         <!-- velocity command and state interfaces for each wheel joint -->
         <joint name="left_track_back_wheel_joint">

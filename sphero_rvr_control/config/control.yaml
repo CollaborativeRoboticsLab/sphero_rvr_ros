@@ -1,12 +1,23 @@
 /**:
   ros__parameters:
-    update_rate: 10
+    update_rate: 50
 
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
 
     diff_drive_controller:
       type: diff_drive_controller/DiffDriveController
+
+    imu_sensor_broadcaster:
+      type: imu_sensor_broadcaster/IMUSensorBroadcaster
+
+    # ambient light sensor broadcaster
+    ambient_light_broadcaster:
+      type: sphero_rvr_controllers/AmbientLightSensorBroadcaster
+
+    # color sensor broadcaster
+    color_sensor_broadcaster:
+      type: sphero_rvr_controllers/ColorSensorBroadcaster
 
     # override the ros2_control hardware settings provided in urdf
     hardware:
@@ -18,3 +29,7 @@
       ticks_per_revolution: 4096
       # Velocity scaling used when mapping wheel rad/s to raw duty
       max_wheel_velocity_rad_s: 10.0
+      enable_imu: true
+      imu_hz: 10
+      enable_light_sensors: true
+      sensor_poll_hz: 2.0
