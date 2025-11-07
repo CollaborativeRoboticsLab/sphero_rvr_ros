@@ -29,7 +29,7 @@ class MQTTFleetLoggerNode(Node):
             return
 
         # Parameters
-        self.robot_id = self.declare_parameter('robot_id', 'rvr_01').value
+        self.robot_id = self.declare_parameter('robot_id', 'rvr-001').value
         self.mqtt_broker = self.declare_parameter(
             'mqtt_broker', 'localhost').value
         self.mqtt_port = self.declare_parameter('mqtt_port', 1883).value

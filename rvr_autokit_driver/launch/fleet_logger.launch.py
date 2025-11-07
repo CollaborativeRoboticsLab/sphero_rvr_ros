@@ -13,7 +13,7 @@ def generate_launch_description():
                 'mqtt_broker': 'localhost',
                 'mqtt_port': 1883,
                 'mqtt_topic_prefix': 'fleet/rvr',
-                'publish_rate': 5.0,
+                'publish_rate': 1.0,
             }]
         )
     ])

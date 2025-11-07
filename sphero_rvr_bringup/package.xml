@@ -14,8 +14,7 @@
   <exec_depend>sphero_rvr_control</exec_depend>
   <exec_depend>sphero_rvr_controllers</exec_depend>
   <exec_depend>rosbridge_server</exec_depend>
-  <!-- TODO: robot_upstart is ROS1-only. Replace with systemd or launch mechanisms in ROS2 if needed. -->
-  <!-- <exec_depend>robot_upstart</exec_depend> -->
+  <exec_depend>rvr_autokit_driver</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>
