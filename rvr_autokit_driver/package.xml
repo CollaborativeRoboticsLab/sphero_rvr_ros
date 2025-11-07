@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>rvr_autokit_driver</name>
+  <version>1.0.0</version>
+  <description>ROS 2 driver for Sphero RVR Sparkfun Autonomous Kit (GPS, distance sensor)</description>
+
+  <license>MIT</license>
+  <maintainer email="mppritchard3@hotmail.com">mik-p</maintainer>
+  <author email="mppritchard3@hotmail.com">mik p</author>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
