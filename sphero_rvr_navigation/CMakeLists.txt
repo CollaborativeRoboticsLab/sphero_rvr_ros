@@ -1,4 +1,14 @@
-cmake_minimum_required(VERSION 3.10.2)
+cmake_minimum_required(VERSION 3.16)
 project(sphero_rvr_navigation)
-find_package(catkin REQUIRED COMPONENTS)
-catkin_package()
+
+find_package(ament_cmake REQUIRED COMPONENTS)
+
+# install config and launch files
+install(
+    DIRECTORY
+        config
+        launch
+    DESTINATION share/${PROJECT_NAME}
+)
+
+ament_package()

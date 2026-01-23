@@ -1,26 +1,27 @@
 <?xml version="1.0"?>
-<package format="2">
+<package format="3">
   <name>sphero_rvr_navigation</name>
-  <version>0.0.0</version>
+  <version>1.0.0</version>
   <description>The sphero_rvr_navigation package</description>
 
-  <maintainer email="mik-p@github.com">mik p</maintainer>
-
   <license>MIT</license>
+  <maintainer email="mppritchard3@hotmail.com">mik-p</maintainer>
+  <author email="mppritchard3@hotmail.com">mik p</author>
 
-  <author email="mik-p@github.com">mik p</author>
+  <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <buildtool_depend>catkin</buildtool_depend>
+  <!-- Runtime dependencies -->
+  <exec_depend>sphero_rvr_control</exec_depend>
+  <exec_depend>sphero_rvr_controllers</exec_depend>
+  <exec_depend>robot_localization</exec_depend>
+  <exec_depend>urg_node</exec_depend>
+  <exec_depend>slam_toolbox</exec_depend>
 
-  <depend>sphero_rvr_control</depend>
-  <depend>sphero_rvr_controllers</depend>
-  <depend>robot_localization</depend>
-  <depend>urg_node</depend>
-  <depend>move_base</depend>
-  <depend>gmapping</depend>
-  <depend>dwa_local_planner</depend>
-  <depend>costmap_2d</depend>
-  <depend>slam_toolbox</depend>
-  <depend>mbf_costmap_nav</depend>
-  <depend>mbf_mesh_nav</depend>
+  <!-- TODO: verify Replace ROS1 navigation stack with Nav2 equivalents -->
+  <exec_depend>nav2_bringup</exec_depend>
+  <exec_depend>nav2_costmap_2d</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
 </package>

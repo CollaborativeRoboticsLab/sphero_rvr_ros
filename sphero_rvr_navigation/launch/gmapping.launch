@@ -1,7 +1,0 @@
-<?xml version="1.0"?>
-<launch>
-  <!--- Run gmapping -->
-  <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping">
-    <rosparam file="$(find sphero_rvr_navigation)/config/gmapping.yaml" command="load"/>
-  </node>
-</launch>

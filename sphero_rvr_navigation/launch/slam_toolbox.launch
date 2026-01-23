@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-    <node pkg="slam_toolbox" type="async_slam_toolbox_node" name="slam_toolbox" output="screen">
-        <rosparam command="load" file="$(find sphero_rvr_navigation)/config/online_async.yaml" />
+    <node pkg="slam_toolbox" exec="async_slam_toolbox_node" name="slam_toolbox" output="screen">
+        <param from="$(find-pkg-share sphero_rvr_navigation)/config/online_async.yaml" />
     </node>
 </launch>
