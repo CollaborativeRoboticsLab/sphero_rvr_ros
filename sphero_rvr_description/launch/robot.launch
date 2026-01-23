@@ -1,10 +1,11 @@
 <?xml version="1.0"?>
 <launch>
   <arg name="model" default="$(find-pkg-share sphero_rvr_description)/urdf/sphero_rvr.urdf.xacro"/>
+  <arg name="use_sim" default="false"/>
 
   <!-- robot state publisher -->
   <node pkg="robot_state_publisher" exec="robot_state_publisher" name="robot_state_publisher" output="screen">
-    <param name="robot_description" value="$(command 'xacro $(var model)')"/>
+    <param name="robot_description" value="$(command 'xacro $(var model) use_sim:=$(var use_sim)')"/>
   </node>
 
 </launch>

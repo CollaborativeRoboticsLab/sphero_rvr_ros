@@ -13,6 +13,9 @@
     <!-- urg laser -->
     <xacro:include filename="$(find urg_node)/urdf/hokuyo_ust10.urdf.xacro" />
 
+    <!-- arguments -->
+    <!-- simulation awareness for ros2 control -->
+    <xacro:arg name="use_sim" default="false"/>
 
     <!-- dummy base link no inertia to satisfy kdl -->
     <link name="base_link"/>
@@ -58,7 +61,9 @@
     <!-- gazebo extras -->
     <!-- gazebo control -->
     <gazebo>
-        <plugin name="gazebo_ros2_control" filename="libgazebo_ros2_control.so"/>
+        <plugin name="gz_ros2_control::GazeboSimROS2ControlPlugin" filename="gz_ros2_control-system">
+            <parameters>$(find sphero_rvr_control)/config/control.yaml</parameters>
+        </plugin>
     </gazebo>
 
     <!-- imu -->
@@ -67,7 +72,7 @@
         <sensor type="imu" name="imu_sensor">
             <always_on>true</always_on>
             <update_rate>10.0</update_rate>
-            <plugin name="imu_plugin" filename="libgazebo_ros_imu_sensor.so">
+            <plugin name="gz::sim::systems::Imu" filename="libgz-sim-imu-system.so">
                 <ros>
                     <namespace>/</namespace>
                 </ros>
@@ -80,17 +85,22 @@
     <!-- ros2_control hardware interface and joint interfaces -->
     <ros2_control name="SpheroRvrSystem" type="system">
         <hardware>
-            <plugin>sphero_rvr_control/SpheroRvrHardwareInterface</plugin>
-            <param name="simulated">false</param>
-            <param name="device_port">/dev/serial0</param>
-            <param name="baud_rate">115200</param>
-            <param name="max_wheel_velocity_rad_s">10.0</param>
-            <!-- encoder ticks per revolution -->
-            <param name="ticks_per_revolution">4096</param>
-            <param name="enable_imu">true</param>
-            <param name="imu_hz">10</param>
-            <param name="enable_light_sensors">true</param>
-            <param name="sensor_poll_hz">2.0</param>
+            <xacro:if value="$(arg use_sim)">
+                <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+            </xacro:if>
+            <xacro:unless value="$(arg use_sim)">
+                <plugin>sphero_rvr_control/SpheroRvrHardwareInterface</plugin>
+                <param name="simulated">false</param>
+                <param name="device_port">/dev/serial0</param>
+                <param name="baud_rate">115200</param>
+                <param name="max_wheel_velocity_rad_s">10.0</param>
+                <!-- encoder ticks per revolution -->
+                <param name="ticks_per_revolution">4096</param>
+                <param name="enable_imu">true</param>
+                <param name="imu_hz">10</param>
+                <param name="enable_light_sensors">true</param>
+                <param name="sensor_poll_hz">2.0</param>
+            </xacro:unless>
         </hardware>
 
         <!-- IMU -->
