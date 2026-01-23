@@ -72,13 +72,20 @@
         <sensor type="imu" name="imu_sensor">
             <always_on>true</always_on>
             <update_rate>10.0</update_rate>
-            <plugin name="gz::sim::systems::Imu" filename="libgz-sim-imu-system.so">
-                <ros>
-                    <namespace>/</namespace>
-                </ros>
-                <frame_name>base_link</frame_name>
-                <topic_name>rvr_driver/imu/data</topic_name>
-            </plugin>
+            <topic>imu</topic>
+            <frame_id>base_link</frame_id>
+            <plugin name="gz::sim::systems::Imu" filename="libgz-sim-imu-system.so"/>
+        </sensor>
+    </gazebo>
+
+    <!-- gps -->
+    <gazebo reference="base_link">
+        <sensor type="gps" name="gps_sensor">
+            <always_on>true</always_on>
+            <update_rate>1.0</update_rate>
+            <topic>fix</topic>
+            <frame_id>base_link</frame_id>
+            <plugin name="gz::sim::systems::NavSat" filename="libgz-sim-navsat-system.so"/>
         </sensor>
     </gazebo>
 
