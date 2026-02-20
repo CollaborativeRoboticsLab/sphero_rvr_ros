@@ -1,16 +1,15 @@
 <?xml version="1.0"?>
-<package format="2">
+<package format="3">
   <name>sphero_rvr_algorithms</name>
-  <version>0.0.0</version>
+  <version>1.0.0</version>
   <description>The sphero_rvr_algorithms package</description>
 
-  <maintainer email="mik-p@github.com">mik p</maintainer>
-
   <license>MIT</license>
+  <maintainer email="mppritchard3@hotmail.com">mik-p</maintainer>
+  <author email="mppritchard3@hotmail.com">mik p</author>
 
-  <author email="mik-p@github.com">mik p</author>
-
-  <buildtool_depend>catkin</buildtool_depend>
+  <!-- TODO: verify ROS2 build system for Python packages -->
+  <buildtool_depend>ament_python</buildtool_depend>
 
   <depend>sphero_rvr_navigation</depend>
 </package>

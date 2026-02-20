@@ -1,5 +1,8 @@
 <?xml version="1.0"?>
 <launch>
+    <!-- include robot bringup -->
+    <include file="$(find-pkg-share sphero_rvr_bringup)/launch/sphero_rvr_bringup.launch" />
+
     <!-- include navigation -->
     <include file="$(find-pkg-share sphero_rvr_navigation)/launch/sphero_rvr_navigation.launch" />
 

@@ -9,7 +9,11 @@ services:
       ros2 launch sphero_rvr_bringup sphero_rvr_bringup.launch
     environment:
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
-      - RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-rmw_cyclonedds_cpp}
+      - RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
+      - ROS_DISCOVERY_SERVER=${DISCOVERY_SERVER_IP:-127.0.0.1}:${DISCOVERY_SERVER_PORT:-11811}
+      - ROS_LOCALHOST_ONLY=${ROS_LOCALHOST_ONLY:-0}
+      - ROS_AUTOMATIC_DISCOVERY_RANGE=${ROS_AUTOMATIC_DISCOVERY_RANGE:-SUBNET}
+      - ROS_SUPER_CLIENT=True
       - SERIAL_PORT=${SERIAL_PORT:-/dev/serial0}
       - I2C_BUS=${I2C_BUS:-/dev/i2c-1}
       - MQTT_BROKER=${MQTT_BROKER:-localhost}
@@ -25,3 +29,25 @@ services:
       - "/dev/serial0:/dev/serial0"
     group_add:
       - dialout
+
+  # fast RTPS discovery server
+  fastrtps_discovery_server:
+    image: ros:jazzy-ros-core
+    command: >
+      fastdds discovery -i 0 -l 0.0.0.0 -p 11811
+    environment:
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - DISCOVERY_SERVER_PORT=${DISCOVERY_SERVER_PORT:-11811}
+      - ROS_DISCOVERY_SERVER=${DISCOVERY_SERVER_IP:-0.0.0.0}:${DISCOVERY_SERVER_PORT:-11811}
+      - ROS_LOCALHOST_ONLY=0
+      - ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET
+    restart: unless-stopped
+    network_mode: host
+
+  # mqtt broker
+  mqtt_broker:
+    image: eclipse-mosquitto:2.0
+    restart: unless-stopped
+    ports:
+      - "1883:1883" # MQTT default port

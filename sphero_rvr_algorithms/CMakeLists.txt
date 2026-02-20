@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10.2)
+cmake_minimum_required(VERSION 3.16)
 project(sphero_rvr_algorithms)
-find_package(catkin REQUIRED COMPONENTS)
-catkin_package()
+find_package(ament_cmake REQUIRED)
+ament_package()
