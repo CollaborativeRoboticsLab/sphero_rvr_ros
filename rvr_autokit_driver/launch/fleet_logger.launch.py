@@ -4,6 +4,15 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     return LaunchDescription([
+        # Launch both the autokit driver and fleet logger together
+        Node(
+            package='rvr_autokit_driver',
+            executable='sparkfun_autokit_driver',
+            name='autokit',
+            parameters=[{
+                'loop_rate': 4.0,
+            }]
+        ),
         Node(
             package='rvr_autokit_driver',
             executable='mqtt_fleet_logger',

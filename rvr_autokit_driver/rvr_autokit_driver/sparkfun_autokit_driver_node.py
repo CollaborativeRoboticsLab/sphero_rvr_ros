@@ -10,7 +10,7 @@ Controls the Sparkfun RVR autonomous kit including:
 
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import LaserScan, NavSatFix, TimeReference
+from sensor_msgs.msg import LaserScan, NavSatFix, NavSatStatus, TimeReference
 import qwiic_titan_gps
 import qwiic_vl53l1x
 
@@ -29,6 +29,7 @@ class RVRAutoKitDriverNode(Node):
         # ROS message variables
         self.laser_scan = LaserScan()
         self.nav_sat_fix = NavSatFix()
+        self.nav_sat_fix.status = NavSatStatus()  # Initialize status field
         self.time_reference = TimeReference()
 
         # Check resources operational
@@ -43,10 +44,11 @@ class RVRAutoKitDriverNode(Node):
             self.get_logger().info('Qwiic VL53L1X connected')
 
         # Publishers
-        self.laser_scan_pub = self.create_publisher(LaserScan, 'scan', 1)
-        self.nav_sat_fix_pub = self.create_publisher(NavSatFix, 'gps', 1)
+        self.laser_scan_pub = self.create_publisher(
+            LaserScan, 'collision/rear/distance', 1)
+        self.nav_sat_fix_pub = self.create_publisher(NavSatFix, 'gps/fix', 1)
         self.time_reference_pub = self.create_publisher(
-            TimeReference, 'time_ref', 1)
+            TimeReference, 'gps/time_ref', 1)
 
         # Start hardware
         self.qwiic_gps.begin()
@@ -71,7 +73,7 @@ class RVRAutoKitDriverNode(Node):
             self.qwiic_vl53l1x.stop_ranging()
 
             # Populate laser scan message
-            self.laser_scan.header.frame_id = 'laser'
+            self.laser_scan.header.frame_id = 'autokit'
             self.laser_scan.header.stamp = self.get_clock().now().to_msg()
             self.laser_scan.angle_min = 0.0
             self.laser_scan.angle_max = 0.0
@@ -88,22 +90,39 @@ class RVRAutoKitDriverNode(Node):
         # Get GPS data
         try:
             if self.qwiic_gps.get_nmea_data() is True:
-                gps_time = self.qwiic_gps['Time']
-
-                self.nav_sat_fix.header.frame_id = 'gps'
-                # Convert GPS time to ROS time
+                # GPS data is in the gnss_messages dictionary
+                self.nav_sat_fix.header.frame_id = 'autokit'
+                # Use ROS time for now (GPS time would require conversion from UTC list)
                 timestamp = self.get_clock().now()
                 self.nav_sat_fix.header.stamp = timestamp.to_msg()
-                self.nav_sat_fix.latitude = float(self.qwiic_gps['Latitude'])
-                self.nav_sat_fix.longitude = float(self.qwiic_gps['Longitude'])
-                self.nav_sat_fix.altitude = float(self.qwiic_gps['Altitude'])
-                self.nav_sat_fix.position_covariance = [0.0] * 9
-                self.nav_sat_fix.position_covariance_type = 0
 
-                # Time reference
-                self.time_reference.header.frame_id = 'gps'
+                # Extract GPS position data
+                self.nav_sat_fix.latitude = float(
+                    self.qwiic_gps.gnss_messages['Latitude'])
+                self.nav_sat_fix.longitude = float(
+                    self.qwiic_gps.gnss_messages['Longitude'])
+
+                # Altitude may not always be available
+                if 'Altitude' in self.qwiic_gps.gnss_messages:
+                    self.nav_sat_fix.altitude = float(
+                        self.qwiic_gps.gnss_messages['Altitude'])
+                else:
+                    self.nav_sat_fix.altitude = 0.0
+
+                # Set covariance (unknown, so use zeros)
+                self.nav_sat_fix.position_covariance = [0.0] * 9
+                self.nav_sat_fix.position_covariance_type = 0  # COVARIANCE_TYPE_UNKNOWN
+
+                # Set status
+                # STATUS_FIX (assuming fix if data is valid)
+                self.nav_sat_fix.status.status = 0
+                self.nav_sat_fix.status.service = 1  # SERVICE_GPS
+
+                # Time reference (GPS time is in UTC as [hh, mm, ss])
+                self.time_reference.header.frame_id = 'autokit'
                 self.time_reference.header.stamp = timestamp.to_msg()
                 self.time_reference.time_ref = self.nav_sat_fix.header.stamp
+                self.time_reference.source = 'autokit'
         except Exception as e:
             self.get_logger().warn(
                 f'GPS error: {e}', throttle_duration_sec=5.0)

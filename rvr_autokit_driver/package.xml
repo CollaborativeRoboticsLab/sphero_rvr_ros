@@ -8,8 +8,6 @@
   <maintainer email="mppritchard3@hotmail.com">mik-p</maintainer>
   <author email="mppritchard3@hotmail.com">mik p</author>
 
-  <buildtool_depend>ament_python</buildtool_depend>
-
   <exec_depend>rclpy</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>launch</exec_depend>
