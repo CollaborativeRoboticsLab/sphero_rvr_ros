@@ -8,8 +8,7 @@
   <maintainer email="mppritchard3@hotmail.com">mik-p</maintainer>
   <author email="mppritchard3@hotmail.com">mik p</author>
 
-  <!-- TODO: verify ROS2 build system for Python packages -->
-  <buildtool_depend>ament_python</buildtool_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>sphero_rvr_navigation</depend>
 </package>
