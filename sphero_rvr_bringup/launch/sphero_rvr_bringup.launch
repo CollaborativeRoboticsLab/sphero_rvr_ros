@@ -7,13 +7,14 @@
     <include file="$(find-pkg-share sphero_rvr_controllers)/launch/sphero_rvr_controllers.launch"/>
 
     <!-- fleet connection -->
-    <node pkg="rvr_autokit_driver" exec="mqtt_fleet_logger" name="mqtt_fleet_logger">
+    <!-- <include file="$(find-pkg-share rvr_autokit_driver)/launch/fleet_logger.launch.py"/> -->
+    <!-- <node pkg="rvr_autokit_driver" exec="mqtt_fleet_logger" name="mqtt_fleet_logger"> -->
         <!-- pull parameters from environment -->
-        <param name="robot_id" value="$(env ROBOT_ID)"/>
+        <!-- <param name="robot_id" value="$(env ROBOT_ID)"/>
         <param name="mqtt_broker" value="$(env MQTT_BROKER)"/>
         <param name="mqtt_port" value="$(env MQTT_PORT)"/>
         <param name="mqtt_topic_prefix" value="$(env MQTT_TOPIC_PREFIX)"/>
-        <param name="publish_rate" value="1.0"/>
-    </node>
+        <param name="publish_rate" value="1.0"/> -->
+    <!-- </node> -->
 
 </launch>
