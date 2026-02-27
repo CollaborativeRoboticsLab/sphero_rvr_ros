@@ -64,7 +64,10 @@ class MQTTFleetLoggerNode(Node):
             self.get_logger().error(f'MQTT connection failed with code {rc}')
 
     def on_mqtt_disconnect(self, client, userdata, rc):
-        self.get_logger().warn(f'Disconnected from MQTT broker with code {rc}')
+        if rc != 0:  # Only log non-clean disconnects
+            self.get_logger().warn(
+                f'Disconnected from MQTT broker with code {rc}',
+                throttle_duration_sec=10.0)
 
     def gps_callback(self, msg):
         self.gps_data = msg
@@ -112,7 +115,8 @@ def main(args=None):
         pass
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == '__main__':

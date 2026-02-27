@@ -46,15 +46,22 @@ class RVRAutoKitDriverNode(Node):
             self.get_logger().info('Qwiic Titan GPS connected')
 
         self.vl53l1x_ranging = False
-        if not self.qwiic_vl53l1x.sensor_init():
-            self.get_logger().error('Qwiic VL53L1X not connected')
-        else:
-            self.get_logger().info('Qwiic VL53L1X connected')
-            try:
-                self.qwiic_vl53l1x.start_ranging()
-                self.vl53l1x_ranging = True
-            except Exception as e:
-                self.get_logger().warn(f'VL53L1X start ranging failed: {e}')
+        self.vl53l1x_available = False
+        try:
+            if self.qwiic_vl53l1x.sensor_init():
+                self.get_logger().info('Qwiic VL53L1X connected')
+                self.vl53l1x_available = True
+                try:
+                    self.qwiic_vl53l1x.start_ranging()
+                    self.vl53l1x_ranging = True
+                except Exception as e:
+                    self.get_logger().warn(
+                        f'VL53L1X start ranging failed: {e}')
+            else:
+                self.get_logger().warn('Qwiic VL53L1X not connected')
+        except Exception as e:
+            self.get_logger().error(
+                f'Qwiic VL53L1X initialization failed: {e}')
 
         # Publishers
         self.range_pub = self.create_publisher(
@@ -76,17 +83,19 @@ class RVRAutoKitDriverNode(Node):
         """Poll sensors and publish data"""
 
         # Get distance sensor data
-        try:
-            if not self.vl53l1x_ranging:
-                self.qwiic_vl53l1x.start_ranging()
-                self.vl53l1x_ranging = True
+        if self.vl53l1x_available:
+            try:
+                if not self.vl53l1x_ranging:
+                    self.qwiic_vl53l1x.start_ranging()
+                    self.vl53l1x_ranging = True
 
-            distance = self.qwiic_vl53l1x.get_distance() / 1000.0
-            self.range_msg.header.frame_id = 'autokit'
-            self.range_msg.header.stamp = self.get_clock().now().to_msg()
-            self.range_msg.range = float(distance)
-        except Exception as e:
-            self.get_logger().warn(f'Distance sensor error: {e}')
+                distance = self.qwiic_vl53l1x.get_distance() / 1000.0
+                self.range_msg.header.frame_id = 'autokit'
+                self.range_msg.header.stamp = self.get_clock().now().to_msg()
+                self.range_msg.range = float(distance)
+            except Exception as e:
+                self.get_logger().warn(
+                    f'Distance sensor error: {e}', throttle_duration_sec=5.0)
 
         # Get GPS data
         try:
@@ -129,7 +138,8 @@ class RVRAutoKitDriverNode(Node):
                 f'GPS error: {e}', throttle_duration_sec=5.0)
 
         # Publish data
-        self.range_pub.publish(self.range_msg)
+        if self.vl53l1x_available:
+            self.range_pub.publish(self.range_msg)
         self.nav_sat_fix_pub.publish(self.nav_sat_fix)
         self.time_reference_pub.publish(self.time_reference)
 
@@ -144,7 +154,8 @@ def main(args=None):
         pass
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == '__main__':

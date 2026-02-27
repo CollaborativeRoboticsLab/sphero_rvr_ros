@@ -27,6 +27,8 @@ ROS 2 driver for the Sparkfun Autonomous Kit for Sphero RVR, including GPS and d
   - Qwiic Titan GPS module
   - VL53L1X distance sensor
 
+**Note:** The driver gracefully handles missing sensors. If the VL53L1X distance sensor fails to initialize (e.g., due to I2C errors or disconnected hardware), the node will continue running and publish GPS data. Distance measurements will not be published if the sensor is unavailable.
+
 ## Runtime Dependencies
 
 Install Python hardware libraries:
