@@ -18,7 +18,7 @@ def generate_launch_description():
             executable='mqtt_fleet_logger',
             name='rvr_fleet_logger',
             parameters=[{
-                'robot_id': 'rvr_01',
+                'robot_id': 'rvr-001',
                 'mqtt_broker': 'localhost',
                 'mqtt_port': 1883,
                 'mqtt_topic_prefix': 'fleet/rvr',

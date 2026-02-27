@@ -49,3 +49,5 @@ services:
     restart: unless-stopped
     ports:
       - "1883:1883" # MQTT default port
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
