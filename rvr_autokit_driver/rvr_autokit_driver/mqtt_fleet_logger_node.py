@@ -40,7 +40,7 @@ class MQTTFleetLoggerNode(Node):
 
         # Subscribers
         self.gps_sub = self.create_subscription(
-            NavSatFix, '/autokit/gps/fix', self.gps_callback, 10)
+            NavSatFix, '/rvr_autokit/gps/fix', self.gps_callback, 10)
         self.battery_sub = self.create_subscription(
             Float32, '/spherorvrsystem/battery', self.battery_callback, 10)
 

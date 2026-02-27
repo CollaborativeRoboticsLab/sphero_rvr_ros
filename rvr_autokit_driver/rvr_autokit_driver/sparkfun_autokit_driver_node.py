@@ -66,9 +66,9 @@ class RVRAutoKitDriverNode(Node):
         # Publishers
         self.range_pub = self.create_publisher(
             Range, 'collision/rear/distance', 1)
-        self.nav_sat_fix_pub = self.create_publisher(NavSatFix, 'gps/fix', 1)
+        self.nav_sat_fix_pub = self.create_publisher(NavSatFix, '~/gps/fix', 1)
         self.time_reference_pub = self.create_publisher(
-            TimeReference, 'gps/time_ref', 1)
+            TimeReference, '~/gps/time_ref', 1)
 
         # Start hardware
         self.qwiic_gps.begin()
