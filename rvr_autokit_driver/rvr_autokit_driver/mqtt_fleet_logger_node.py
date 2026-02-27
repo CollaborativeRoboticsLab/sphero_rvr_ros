@@ -7,26 +7,17 @@ Publishes RVR telemetry to an MQTT broker for fleet monitoring.
 Note: This is a placeholder implementation. Configure MQTT broker details via parameters.
 """
 
+import json
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import Float32
-import json
-
-try:
-    import paho.mqtt.client as mqtt
-    MQTT_AVAILABLE = True
-except ImportError:
-    MQTT_AVAILABLE = False
+import paho.mqtt.client as mqtt
 
 
 class MQTTFleetLoggerNode(Node):
     def __init__(self):
         super().__init__('mqtt_fleet_logger')
-
-        if not MQTT_AVAILABLE:
-            self.get_logger().error('paho-mqtt not installed. Install with: pip install paho-mqtt')
-            return
 
         # Parameters
         self.robot_id = self.declare_parameter('robot_id', 'rvr-001').value
@@ -51,7 +42,7 @@ class MQTTFleetLoggerNode(Node):
         self.gps_sub = self.create_subscription(
             NavSatFix, '/autokit/gps/fix', self.gps_callback, 10)
         self.battery_sub = self.create_subscription(
-            Float32, '/rvr_driver/battery', self.battery_callback, 10)
+            Float32, '/spherorvrsystem/battery', self.battery_callback, 10)
 
         # Timer to publish to MQTT
         self.timer = self.create_timer(
@@ -83,8 +74,6 @@ class MQTTFleetLoggerNode(Node):
 
     def publish_to_mqtt(self):
         """Publish telemetry to MQTT"""
-        if not MQTT_AVAILABLE:
-            return
 
         payload = {
             'robot_id': self.robot_id,
@@ -108,7 +97,7 @@ class MQTTFleetLoggerNode(Node):
             self.get_logger().warn(f'Failed to publish to MQTT: {e}')
 
     def __del__(self):
-        if MQTT_AVAILABLE and hasattr(self, 'mqtt_client'):
+        if hasattr(self, 'mqtt_client'):
             self.mqtt_client.loop_stop()
             self.mqtt_client.disconnect()
 

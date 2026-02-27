@@ -12,7 +12,7 @@ ROS 2 driver for the Sparkfun Autonomous Kit for Sphero RVR, including GPS and d
 ### Sparkfun AutoKit Driver
 
 - Publishes GPS data (NavSatFix) from Qwiic Titan GPS module
-- Publishes distance data (LaserScan) from VL53L1X time-of-flight sensor
+- Publishes distance data (Range) from VL53L1X time-of-flight sensor
 - Publishes GPS time reference
 
 ### MQTT Fleet Logger
@@ -70,16 +70,16 @@ ros2 launch rvr_autokit_driver fleet_logger.launch.py
 
 **Publications:**
 
-- `scan` (sensor_msgs/LaserScan): Distance sensor reading as single-point scan
-- `gps` (sensor_msgs/NavSatFix): GPS position fix
-- `time_ref` (sensor_msgs/TimeReference): GPS time reference
+- `collision/rear/distance` (sensor_msgs/Range): Distance sensor reading
+- `gps/fix` (sensor_msgs/NavSatFix): GPS position fix
+- `gps/time_ref` (sensor_msgs/TimeReference): GPS time reference
 
 ### mqtt_fleet_logger
 
 **Subscriptions:**
 
-- `/rvr_autokit/gps` (sensor_msgs/NavSatFix): GPS position data
-- `/rvr_driver/battery` (std_msgs/Float32): Battery percentage
+- `/autokit/gps/fix` (sensor_msgs/NavSatFix): GPS position data
+- `/spherorvrsystem/battery` (std_msgs/Float32): Battery percentage
 
 **MQTT Publishing:**
 

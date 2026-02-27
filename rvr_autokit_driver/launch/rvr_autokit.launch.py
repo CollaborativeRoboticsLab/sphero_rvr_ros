@@ -7,7 +7,7 @@ def generate_launch_description():
         Node(
             package='rvr_autokit_driver',
             executable='sparkfun_autokit_driver',
-            name='rvr_autokit',
+            name='autokit',
             parameters=[{
                 'loop_rate': 4.0,
             }]

@@ -10,7 +10,10 @@ Controls the Sparkfun RVR autonomous kit including:
 
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import LaserScan, NavSatFix, NavSatStatus, TimeReference
+from sensor_msgs.msg import NavSatFix
+from sensor_msgs.msg import NavSatStatus
+from sensor_msgs.msg import TimeReference
+from sensor_msgs.msg import Range
 import qwiic_titan_gps
 import qwiic_vl53l1x
 
@@ -27,7 +30,11 @@ class RVRAutoKitDriverNode(Node):
         self.qwiic_vl53l1x = qwiic_vl53l1x.QwiicVL53L1X()
 
         # ROS message variables
-        self.laser_scan = LaserScan()
+        self.range_msg = Range()
+        self.range_msg.radiation_type = Range.INFRARED
+        self.range_msg.field_of_view = 0.0
+        self.range_msg.min_range = 0.03
+        self.range_msg.max_range = 4.0
         self.nav_sat_fix = NavSatFix()
         self.nav_sat_fix.status = NavSatStatus()  # Initialize status field
         self.time_reference = TimeReference()
@@ -38,14 +45,20 @@ class RVRAutoKitDriverNode(Node):
         else:
             self.get_logger().info('Qwiic Titan GPS connected')
 
+        self.vl53l1x_ranging = False
         if not self.qwiic_vl53l1x.sensor_init():
             self.get_logger().error('Qwiic VL53L1X not connected')
         else:
             self.get_logger().info('Qwiic VL53L1X connected')
+            try:
+                self.qwiic_vl53l1x.start_ranging()
+                self.vl53l1x_ranging = True
+            except Exception as e:
+                self.get_logger().warn(f'VL53L1X start ranging failed: {e}')
 
         # Publishers
-        self.laser_scan_pub = self.create_publisher(
-            LaserScan, 'collision/rear/distance', 1)
+        self.range_pub = self.create_publisher(
+            Range, 'collision/rear/distance', 1)
         self.nav_sat_fix_pub = self.create_publisher(NavSatFix, 'gps/fix', 1)
         self.time_reference_pub = self.create_publisher(
             TimeReference, 'gps/time_ref', 1)
@@ -64,26 +77,14 @@ class RVRAutoKitDriverNode(Node):
 
         # Get distance sensor data
         try:
-            self.qwiic_vl53l1x.start_ranging()
-            # Small delay for sensor reading
-            import time
-            time.sleep(0.005)
-            distance = self.qwiic_vl53l1x.get_distance() / 1000.0  # Convert mm to meters
-            time.sleep(0.005)
-            self.qwiic_vl53l1x.stop_ranging()
+            if not self.vl53l1x_ranging:
+                self.qwiic_vl53l1x.start_ranging()
+                self.vl53l1x_ranging = True
 
-            # Populate laser scan message
-            self.laser_scan.header.frame_id = 'autokit'
-            self.laser_scan.header.stamp = self.get_clock().now().to_msg()
-            self.laser_scan.angle_min = 0.0
-            self.laser_scan.angle_max = 0.0
-            self.laser_scan.angle_increment = 0.0
-            self.laser_scan.time_increment = 0.0
-            self.laser_scan.scan_time = 0.0
-            self.laser_scan.range_min = 0.0
-            self.laser_scan.range_max = 4.0  # VL53L1X max range ~4m
-            self.laser_scan.ranges = [float(distance)]
-            self.laser_scan.intensities = [1.0]
+            distance = self.qwiic_vl53l1x.get_distance() / 1000.0
+            self.range_msg.header.frame_id = 'autokit'
+            self.range_msg.header.stamp = self.get_clock().now().to_msg()
+            self.range_msg.range = float(distance)
         except Exception as e:
             self.get_logger().warn(f'Distance sensor error: {e}')
 
@@ -128,7 +129,7 @@ class RVRAutoKitDriverNode(Node):
                 f'GPS error: {e}', throttle_duration_sec=5.0)
 
         # Publish data
-        self.laser_scan_pub.publish(self.laser_scan)
+        self.range_pub.publish(self.range_msg)
         self.nav_sat_fix_pub.publish(self.nav_sat_fix)
         self.time_reference_pub.publish(self.time_reference)
 
