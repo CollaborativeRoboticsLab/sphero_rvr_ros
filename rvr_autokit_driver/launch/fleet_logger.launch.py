@@ -1,3 +1,4 @@
+import os
 from launch import LaunchDescription
 from launch_ros.actions import Node
 
@@ -18,10 +19,11 @@ def generate_launch_description():
             executable='mqtt_fleet_logger',
             name='rvr_fleet_logger',
             parameters=[{
-                'robot_id': 'rvr-001',
-                'mqtt_broker': 'localhost',
-                'mqtt_port': 1883,
-                'mqtt_topic_prefix': 'fleet/rvr',
+                # get these from environment variables or set defaults
+                'robot_id': os.environ.get('ROBOT_ID', 'rvr-001'),
+                'mqtt_broker': os.environ.get('MQTT_BROKER', 'localhost'),
+                'mqtt_port': int(os.environ.get('MQTT_PORT', 1883)),
+                'mqtt_topic_prefix': os.environ.get('MQTT_TOPIC_PREFIX', 'fleet/rvr'),
                 'publish_rate': 1.0,
             }]
         )
