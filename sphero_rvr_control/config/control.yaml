@@ -1,6 +1,6 @@
 /**:
   ros__parameters:
-    update_rate: 25
+    update_rate: 8
 
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
@@ -28,8 +28,8 @@
       # Encoder calibration
       ticks_per_revolution: 4096
       # Velocity scaling used when mapping wheel rad/s to raw duty
-      max_wheel_velocity_rad_s: 10.0
+      max_wheel_velocity_rad_s: 5.0
       enable_imu: true
-      imu_hz: 10
+      imu_hz: 4
       enable_light_sensors: true
       sensor_poll_hz: 2.0

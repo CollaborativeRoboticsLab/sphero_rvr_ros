@@ -158,6 +158,10 @@ SpheroRvrHardwareInterface::on_configure(const rclcpp_lifecycle::State& /*previo
       "~/set_status_led", std::bind(&SpheroRvrHardwareInterface::set_status_led_callback, this, std::placeholders::_1,
                                     std::placeholders::_2));
 
+  set_headlight_sub_ = node->create_subscription<std_msgs::msg::ColorRGBA>(
+      "~/headlight", 10,
+      std::bind(&SpheroRvrHardwareInterface::set_headlight_topic_callback, this, std::placeholders::_1));
+
   if (!simulated_)
   {
     // Initialize connection to Sphero RVR hardware
@@ -274,9 +278,22 @@ SpheroRvrHardwareInterface::on_activate(const rclcpp_lifecycle::State& /*previou
 {
   RCLCPP_INFO(rclcpp::get_logger("SpheroRvrHardwareInterface"), "Activating hardware interface...");
 
+  // Reset recovery state on activation
+  sleep_imminent_.store(false);
+  sleeping_.store(false);
+
   // Initialize hardware-managed LEDs
   if (rvr_ && !simulated_)
   {
+    // wake and set longer timeout
+    rvr_->wake();                                          // wake the RVR from soft sleep
+    std::this_thread::sleep_for(std::chrono::seconds(2));  // Wait for wake
+    // after waking, reset your control system timeout
+    if (!rvr_->set_custom_control_system_timeout(10000))
+    {
+      RCLCPP_ERROR(rclcpp::get_logger("SpheroRvrHardwareInterface"), "FAILED to set control system timeout!");
+    }
+
     // Set rear brakelights to red (indicate reverse direction)
     rvr_->set_brakelights_rgb(255, 0, 0);
 
@@ -286,6 +303,20 @@ SpheroRvrHardwareInterface::on_activate(const rclcpp_lifecycle::State& /*previou
     // Initialize battery door LEDs based on current battery level
     // Will be updated periodically in read()
     rvr_->set_battery_leds_rgb(0, 255, 0);  // Start with green
+
+    // DETECT imminent sleep (wake() in callback doesn't prevent it due to RVR firmware behavior)
+    rvr_->set_will_sleep_callback([this]() {
+      RCLCPP_WARN(rclcpp::get_logger("SpheroRvrHardwareInterface"), "RVR sleep imminent - will recover after sleep "
+                                                                    "cycle completes");
+      sleep_imminent_.store(true);
+    });
+
+    // DETECT did sleep
+    rvr_->set_did_sleep_callback([this]() {
+      RCLCPP_WARN(rclcpp::get_logger("SpheroRvrHardwareInterface"), "RVR has entered sleep mode");
+      sleeping_.store(true);
+      wake_initiated_time_ = std::chrono::steady_clock::now();
+    });
 
     // Configure and start IMU streaming with realtime-safe callback
     if (enable_imu_)
@@ -366,6 +397,9 @@ SpheroRvrHardwareInterface::on_deactivate(const rclcpp_lifecycle::State& /*previ
     // Release all LED control back to default behavior
     rvr_->release_led_requests();
 
+    // reset custom control timeout
+    rvr_->restore_default_control_system_timeout();
+
     rvr_->disconnect();
   }
 
@@ -416,6 +450,12 @@ hardware_interface::return_type SpheroRvrHardwareInterface::read(const rclcpp::T
   // Real hardware: read encoders
   if (rvr_)
   {
+    // Initialize clock for all sensor timing in this cycle
+    using clock = std::chrono::steady_clock;
+    static const auto min_interval = std::chrono::duration_cast<clock::duration>(
+        std::chrono::duration<double>(1.0 / std::max(0.1, sensor_poll_hz_)));
+    const auto now_tp = clock::now();
+
     int32_t left_ticks, right_ticks;
     if (!rvr_->get_encoder_counts(left_ticks, right_ticks))
     {
@@ -479,20 +519,36 @@ hardware_interface::return_type SpheroRvrHardwareInterface::read(const rclcpp::T
       }
     }
 
-    // Read light sensors (ambient + RGBC) at <= sensor_poll_hz_
+    // Read light sensors staggered to avoid blocking multiple transacts per cycle
     if (enable_light_sensors_)
     {
-      using clock = std::chrono::steady_clock;
-      static const auto min_interval = std::chrono::duration<double>(1.0 / std::max(0.1, sensor_poll_hz_));
-      const auto now_tp = clock::now();
-      if (last_light_read_.time_since_epoch().count() == 0 || (now_tp - last_light_read_) >= min_interval)
+      // Ambient light with offset
+      if (last_ambient_light_read_.time_since_epoch().count() == 0)
+      {
+        // Initialize with offset on first read (fraction of min_interval)
+        auto offset = std::chrono::duration_cast<clock::duration>(min_interval * ambient_offset_fraction_);
+        last_ambient_light_read_ = now_tp - min_interval + offset;
+      }
+      if ((now_tp - last_ambient_light_read_) >= min_interval)
       {
         float ambient = 0.0f;
-        uint16_t r = 0, g = 0, b = 0, c = 0;
         if (rvr_->get_ambient_light(ambient))
         {
           light_ambient_ = static_cast<double>(ambient);
         }
+        last_ambient_light_read_ = now_tp;
+      }
+
+      // RGBC color with offset
+      if (last_rgbc_read_.time_since_epoch().count() == 0)
+      {
+        // Initialize with offset on first read (fraction of min_interval)
+        auto offset = std::chrono::duration_cast<clock::duration>(min_interval * rgbc_offset_fraction_);
+        last_rgbc_read_ = now_tp - min_interval + offset;
+      }
+      if ((now_tp - last_rgbc_read_) >= min_interval)
+      {
+        uint16_t r = 0, g = 0, b = 0, c = 0;
         if (rvr_->get_rgbc(r, g, b, c))
         {
           light_r_ = static_cast<double>(r);
@@ -500,16 +556,21 @@ hardware_interface::return_type SpheroRvrHardwareInterface::read(const rclcpp::T
           light_b_ = static_cast<double>(b);
           light_c_ = static_cast<double>(c);
         }
-        last_light_read_ = now_tp;
+        last_rgbc_read_ = now_tp;
       }
     }
 
-    // Read battery and update indicator LEDs at <= sensor_poll_hz_
+    // Read battery and update indicator LEDs at <= sensor_poll_hz_ with offset
     {
-      using clock = std::chrono::steady_clock;
-      static const auto min_interval = std::chrono::duration<double>(1.0 / std::max(0.1, sensor_poll_hz_));
-      const auto now_tp = clock::now();
-      if (last_battery_read_.time_since_epoch().count() == 0 || (now_tp - last_battery_read_) >= min_interval)
+      // Initialize with offset on first read
+      if (last_battery_read_.time_since_epoch().count() == 0)
+      {
+        // Battery has no offset (fires first)
+        auto offset = std::chrono::duration_cast<clock::duration>(min_interval * battery_offset_fraction_);
+        last_battery_read_ = now_tp - min_interval + offset;
+      }
+
+      if ((now_tp - last_battery_read_) >= min_interval)
       {
         uint8_t battery_pct = 0;
         if (rvr_->get_battery_percentage(battery_pct))
@@ -573,6 +634,26 @@ hardware_interface::return_type SpheroRvrHardwareInterface::write(const rclcpp::
   if (simulated_)
   {
     // Ignore writes to hardware in simulated mode
+    return hardware_interface::return_type::OK;
+  }
+
+  // Handle recovery state machine (non-blocking)
+  if (sleeping_.load() && rvr_)
+  {
+    auto now = std::chrono::steady_clock::now();
+
+    // Wait for wake to complete
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - wake_initiated_time_).count();
+    if (elapsed >= WAKE_WAIT_MS)
+    {
+      reinitialize_device();
+    }
+  }
+
+  // periodically send wake command when sleep is imminent
+  if (sleep_imminent_.load() && rvr_)
+  {
+    rvr_->wake();  // Keepalive to NODE_NORDIC
     return hardware_interface::return_type::OK;
   }
 
@@ -689,6 +770,63 @@ void SpheroRvrHardwareInterface::set_status_led_callback(
 
   RCLCPP_DEBUG(rclcpp::get_logger("SpheroRvrHardwareInterface"), "Status LED command queued: RGB(%u, %u, %u)",
                request->r, request->g, request->b);
+}
+
+void SpheroRvrHardwareInterface::set_headlight_topic_callback(const std_msgs::msg::ColorRGBA::SharedPtr msg)
+{
+  auto clamp01 = [](float v) {
+    if (v < 0.0f)
+      return 0.0f;
+    if (v > 1.0f)
+      return 1.0f;
+    return v;
+  };
+  auto to_u8 = [&](float v) { return static_cast<uint8_t>(std::lround(clamp01(v) * 255.0f)); };
+
+  LEDCommand cmd;
+  cmd.target = LEDCommand::Target::HEADLIGHTS;
+  cmd.r = to_u8(msg->r);
+  cmd.g = to_u8(msg->g);
+  cmd.b = to_u8(msg->b);
+  cmd.has_command = true;
+
+  // Write to realtime buffer (lock-free, safe to call from subscription)
+  led_command_buffer_.writeFromNonRT(cmd);
+
+  RCLCPP_DEBUG(rclcpp::get_logger("SpheroRvrHardwareInterface"), "Headlight topic command queued: RGB(%u, %u, %u)",
+               cmd.r, cmd.g, cmd.b);
+}
+
+void SpheroRvrHardwareInterface::reinitialize_device()
+{
+  RCLCPP_INFO(rclcpp::get_logger("SpheroRvrHardwareInterface"), "Reinitializing device after wake");
+
+  // Reset control system timeout
+  if (!rvr_->set_custom_control_system_timeout(10000))
+  {
+    RCLCPP_WARN(rclcpp::get_logger("SpheroRvrHardwareInterface"), "Failed to set control system timeout during "
+                                                                  "recovery");
+  }
+
+  // Restore hardware-managed LEDs
+  rvr_->set_brakelights_rgb(255, 0, 0);
+  rvr_->set_undercarriage_white(255);
+  rvr_->set_battery_leds_rgb(0, 255, 0);
+
+  // Restart IMU streaming if enabled
+  if (enable_imu_)
+  {
+    const int hz = std::max(1, imu_hz_);
+    const uint16_t period_ms = static_cast<uint16_t>(std::max(33, 1000 / hz));
+    if (!rvr_->enable_imu_suite_streaming(period_ms))
+    {
+      RCLCPP_WARN(rclcpp::get_logger("SpheroRvrHardwareInterface"), "Failed to restart IMU streaming during recovery");
+    }
+  }
+
+  // Clear sleep detection flags
+  sleep_imminent_.store(false);
+  sleeping_.store(false);
 }
 
 }  // namespace sphero_rvr_control
